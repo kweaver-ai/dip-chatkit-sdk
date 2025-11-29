@@ -11,7 +11,9 @@
       "Bash(mkdir:*)",
       "Bash(rm:*)",
       "WebFetch(domain:accounts.feishu.cn)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

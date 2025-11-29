@@ -49,7 +49,7 @@ export class ChatKitDataAgent extends ChatKitBase<ChatKitDataAgentProps> {
    * @param ctx 应用上下文
    * @returns 返回助手消息
    */
-  async sendMessage(text: string, ctx: ApplicationContext): Promise<ChatMessage> {
+  public async sendMessage(text: string, ctx: ApplicationContext): Promise<ChatMessage> {
     if (!this.baseUrl) {
       throw new Error('Data Agent baseUrl 不能为空');
     }
@@ -121,7 +121,7 @@ export class ChatKitDataAgent extends ChatKitBase<ChatKitDataAgentProps> {
    * 解析 Data Agent 的 EventStreamMessage
    * 当 key 仅包含 ["message"] 时，取首词输出；后续仅从包含 ["message", "final_answer"] 的事件取内容
    */
-  reduceEventStreamMessage(
+  public reduceEventStreamMessage(
     eventMessage: EventStreamMessage,
     prevBuffer: string
   ): string {

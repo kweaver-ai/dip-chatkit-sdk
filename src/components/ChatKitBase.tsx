@@ -77,7 +77,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param ctx 随用户输入文本一起发送的应用上下文
    * @returns 返回发送的消息结构
    */
-  abstract sendMessage(text: string, ctx: ApplicationContext): Promise<ChatMessage>;
+  public abstract sendMessage(text: string, ctx: ApplicationContext): Promise<ChatMessage>;
 
   /**
    * 解析 EventStreamMessage 并累积文本 (抽象方法，由子类实现)
@@ -88,20 +88,20 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param prevBuffer 之前已经堆积起来的文本
    * @returns 返回解析并积累起来后的 buffer
    */
-  abstract reduceEventStreamMessage(eventMessage: EventStreamMessage, prevBuffer: string): string;
+  public abstract reduceEventStreamMessage(eventMessage: EventStreamMessage, prevBuffer: string): string;
 
   /**
    * 向 ChatKit 注入应用上下文
    * @param ctx 要注入的应用上下文
    */
-  injectApplicationContext = (ctx: ApplicationContext): void => {
+  public injectApplicationContext = (ctx: ApplicationContext): void => {
     this.setState({ applicationContext: ctx });
   };
 
   /**
    * 移除注入的应用上下文
    */
-  removeApplicationContext = (): void => {
+  public removeApplicationContext = (): void => {
     this.setState({ applicationContext: this.props.defaultApplicationContext });
   };
 
@@ -111,7 +111,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param ctx 应用上下文
    * @returns 返回发送的消息结构
    */
-  send = async (text: string, ctx: ApplicationContext): Promise<ChatMessage> => {
+  public send = async (text: string, ctx: ApplicationContext): Promise<ChatMessage> => {
     if (!text.trim()) {
       throw new Error('消息内容不能为空');
     }
@@ -128,6 +128,8 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
         type: RoleType.USER,
         avatar: '',
       },
+      // 如果有应用上下文，则附加到用户消息中
+      applicationContext: ctx.title || ctx.data ? ctx : undefined,
     };
 
     // 将用户消息添加到消息列表
@@ -245,7 +247,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
   /**
    * 处理发送按钮点击
    */
-  handleSend = async () => {
+  private handleSend = async () => {
     if (!this.state.textInput.trim() || this.state.isSending) {
       return;
     }
@@ -265,7 +267,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
   /**
    * 更新用户输入
    */
-  setTextInput = (value: string) => {
+  private setTextInput = (value: string) => {
     this.setState({ textInput: value });
   };
 

@@ -30,6 +30,35 @@ export const ChatKitCozeDemo: React.FC = () => {
     }
   };
 
+  /**
+   * 一键发送对话示例
+   * 直接调用 sendMessage() 方法发送消息
+   */
+  const sendExampleMessage = async () => {
+    if (!showChat) {
+      setShowChat(true);
+    }
+
+    // 等待组件渲染完成
+    setTimeout(async () => {
+      const context: ApplicationContext = {
+        title: '中心节点',
+        data: {
+          node_id: 'node-uuid-1',
+        },
+      };
+
+      try {
+        await chatKitRef.current?.send(
+          '节点故障,帮我分析可能的原因并给出解决方案',
+          context
+        );
+      } catch (error) {
+        console.error('发送消息失败:', error);
+      }
+    }, 100);
+  };
+
   return (
     <div className={`relative flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 min-h-screen ${chatOffsetClass}`}>
       <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg p-8">
@@ -43,7 +72,14 @@ export const ChatKitCozeDemo: React.FC = () => {
             onClick={injectExampleContext}
             className="w-full bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 transition-colors font-medium"
           >
-            添加上下文并打开聊天
+            【添加应用上下文】
+          </button>
+
+          <button
+            onClick={sendExampleMessage}
+            className="w-full bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 transition-colors font-medium"
+          >
+            【一键发送对话】
           </button>
 
           <button
@@ -57,8 +93,9 @@ export const ChatKitCozeDemo: React.FC = () => {
         <div className="mt-8 p-4 bg-blue-50 rounded-lg">
           <h2 className="text-lg font-semibold text-blue-800 mb-2">功能说明</h2>
           <ul className="text-sm text-blue-700 space-y-1">
-            <li>• 上下文会显示在输入框上方，可以通过 × 按钮移除</li>
-            <li>• 发送消息时，控制台会打印出选中的上下文信息</li>
+            <li>• 【添加应用上下文】按钮会注入"故障节点"上下文到 ChatKit</li>
+            <li>• 【一键发送对话】按钮会直接发送消息："节点故障,帮我分析可能的原因并给出解决方案",并携带"中心节点"上下文</li>
+            <li>• 上下文会显示在输入框上方,可以通过 × 按钮移除</li>
             <li>• ChatKitCoze 组件自动使用流式响应</li>
             <li>• 使用扣子 API 时会保持会话上下文</li>
           </ul>
@@ -76,7 +113,7 @@ export const ChatKitCozeDemo: React.FC = () => {
         </div>
 
         <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">示例上下文数据:</h3>
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">【添加应用上下文】示例数据:</h3>
           <pre className="text-xs text-gray-600 bg-white p-3 rounded overflow-x-auto">
 {`{
   "title": "故障节点",
@@ -85,6 +122,27 @@ export const ChatKitCozeDemo: React.FC = () => {
   }
 }`}
           </pre>
+        </div>
+
+        <div className="mt-4 p-4 bg-gray-100 rounded-lg">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">【一键发送对话】示例数据:</h3>
+          <div className="text-xs text-gray-600 bg-white p-3 rounded overflow-x-auto space-y-2">
+            <div>
+              <strong>消息文本:</strong>
+              <p className="mt-1">节点故障,帮我分析可能的原因并给出解决方案</p>
+            </div>
+            <div>
+              <strong>应用上下文:</strong>
+              <pre className="mt-1">
+{`{
+  "title": "中心节点",
+  "data": {
+    "node_id": "node-uuid-1"
+  }
+}`}
+              </pre>
+            </div>
+          </div>
         </div>
       </div>
 

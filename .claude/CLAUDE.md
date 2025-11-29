@@ -9,8 +9,7 @@
 在开始编写代码之前，一定要仔细阅读所有有关的文档。
 
 **设计**
-- 组件的设计文档在飞书文档上，地址已设置为公开：https://kcnk6oub5282.feishu.cn/wiki/YktDwivKCik6dKkvPgJcoZUsnZb
-- 如果无法从飞书抓取文档信息，则从 design 目录下获取备用的设计文档
+- 从 design 目录下获取设计文档
 
 **实现**
 - 使用 TypeScript 作为开发语言，使用 ReactJS 和 Tailwind 作为框架
@@ -25,10 +24,22 @@ ChatKitCoze 组件继承了 ChatKitBase 和 ChatKitInterface，ChatKitCoze 需�
 * reduceEventStreamMessage(): 解析扣子（Coze）输出的 EventStreamMessage，追加并返回字符串以供界面实现打字机效果。 
 
 # ChatKitCoze Demo
-ChatKitCoze Demo 是一个简单的 Web 应用，该应用需要挂载 ChatKitCoze 组件。ChatKitCoze Demo 应用上有一个添加上下文的按钮，点击该按钮会将以下对象注入到 ChatKitCoze 的用户输入上下文中：
+ChatKitCoze Demo 是一个简单的 Web 应用，该应用需要挂载 ChatKitCoze 组件。ChatKitCoze Demo 应用上有两个主要按钮：
+1. 【添加应用上下文】按钮，点击该按钮会将以下对象注入到 ChatKitCoze 的应用上下文中：
 ```json
 {
     "title": "故障节点",
+    "data": {
+        "node_id": "node-uuid-1"
+    }
+}
+```
+2. 【一键发送对话】按钮，点击该按钮会直接调用 sendMessage() 方法发送消息，参数如下：
+* text: 节点故障，帮我分析可能的原因并给出解决方案
+* applicationContext:
+```json
+{
+    "title": "中心节点",
     "data": {
         "node_id": "node-uuid-1"
     }

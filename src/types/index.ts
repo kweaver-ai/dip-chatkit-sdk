@@ -56,6 +56,9 @@ export interface ChatMessage {
 
   /** 该条消息的内容 */
   content: string;
+
+  /** 与该消息关联的应用上下文（可选），仅用户消息可能包含此字段 */
+  applicationContext?: ApplicationContext;
 }
 
 /**

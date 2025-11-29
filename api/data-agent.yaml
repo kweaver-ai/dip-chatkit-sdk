@@ -238,7 +238,7 @@ info:
   version: 1.0.0
 openapi: 3.0.0
 servers:
-  - url: https://dip.aishu.cn:443/api/agent-app/v1
+  - url: https://dip.aishu.cn/api/agent-app/v1
     description: 生产环境
 paths:
   '/app/{agent_id}/chat/completion':

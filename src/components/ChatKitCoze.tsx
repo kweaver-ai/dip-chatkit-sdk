@@ -44,7 +44,7 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
    * @param ctx 随用户输入文本一起发送的应用上下文
    * @returns 返回发送的消息结构
    */
-  async sendMessage(text: string, ctx: ApplicationContext): Promise<ChatMessage> {
+  public async sendMessage(text: string, ctx: ApplicationContext): Promise<ChatMessage> {
     // 构造上下文信息
     let fullMessage = text;
     if (ctx && ctx.title) {
@@ -134,7 +134,7 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
    * @param prevBuffer 之前已经堆积起来的文本
    * @returns 返回解析并积累起来后的 buffer
    */
-  reduceEventStreamMessage(eventMessage: EventStreamMessage, prevBuffer: string): string {
+  public reduceEventStreamMessage(eventMessage: EventStreamMessage, prevBuffer: string): string {
     try {
       const data = JSON.parse(eventMessage.data);
       console.log('reduceEventStreamMessage 调用:', {
