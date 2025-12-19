@@ -8,7 +8,9 @@ export const DATA_AGENT_CONFIG = {
   agentId: '01KAZKS30H0X0D8Z8K25VKSJ98',
   /** Bearer Token,请确认包含 Bearer 前缀 */
   bearerToken:
-    'Bearer ory_at__O5wAAa8GnEzStC4AddQiySz7IVKujR6sDnevtsPjb4.Q73azYQlBGQwDTDDqXrc9CZyCsRskqi2WzPl5-f-sBY'
+    'Bearer ory_at_OFWoNBLS70BmOZoclwslxAKPZl2enQ45f-jPrMAh3r8.kYSifkaVIo8ttSZTiaaRCE7vulSht-uoWuq-ZykRT7o',
+  /** 业务域 */
+  businessDomain: 'bd_public'
 };
 
 /**

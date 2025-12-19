@@ -19,6 +19,12 @@ export default defineConfig({
         secure: false,
         rewrite: (p) => p.replace(/^\/data-agent/, ''),
       },
+      // 将本地 /api 前缀的请求代理到 AISHU 服务,用于 agent-factory API
+      '/api': {
+        target: 'https://dip.aishu.cn:443',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })

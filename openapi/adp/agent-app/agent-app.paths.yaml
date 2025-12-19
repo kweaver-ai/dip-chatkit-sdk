@@ -2,7 +2,7 @@ paths:
   /app/{agent_id}/conversation:
     post:
       tags:
-        - data-agent
+        - agent-app
       operationId: createConversation
       summary: 创建会话
       description: 创建 Data Agent 会话。
@@ -18,7 +18,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: ./data-agent.schemas.yaml#/components/schemas/CreateConversationRequest
+              $ref: ./agent-app.schemas.yaml#/components/schemas/CreateConversationRequest
             example:
               agent_id: 01KAZKS30H0X0D8Z8K24FMRJK6
               agent_version: v1
@@ -29,12 +29,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ./data-agent.schemas.yaml#/components/schemas/ConversationResponse
+                $ref: ./agent-app.schemas.yaml#/components/schemas/ConversationResponse
 
   /app/{agent_id}/chat/completion:
     post:
       tags:
-        - data-agent
+        - agent-app
       operationId: sendChatCompletion
       summary: 发送对话消息
       description: 调用 Data Agent 聊天接口，支持流式返回。
@@ -57,7 +57,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: ./data-agent.schemas.yaml#/components/schemas/ChatCompletionRequest
+              $ref: ./agent-app.schemas.yaml#/components/schemas/ChatCompletionRequest
             example:
               agent_id: 01KAZKS30H0X0D8Z8K24FMRJK6
               query: 集群节点故障该如何处理
@@ -68,4 +68,4 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ./data-agent.schemas.yaml#/components/schemas/ChatResponse
+                $ref: ./agent-app.schemas.yaml#/components/schemas/ChatResponse

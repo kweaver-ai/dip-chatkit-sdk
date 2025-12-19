@@ -97,6 +97,7 @@ export const ChatKitDataAgentDemo: React.FC = () => {
             baseUrl={DATA_AGENT_CONFIG.baseUrl}
             agentId={DATA_AGENT_CONFIG.agentId}
             bearerToken={DATA_AGENT_CONFIG.bearerToken}
+            businessDomain={DATA_AGENT_CONFIG.businessDomain}
           />
         </div>
       )}

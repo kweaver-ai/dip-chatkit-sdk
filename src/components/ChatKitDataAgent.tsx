@@ -23,6 +23,9 @@ export interface ChatKitDataAgentProps extends ChatKitBaseProps {
 
   /** 是否开启增量流式返回,默认 true */
   enableIncrementalStream?: boolean;
+
+  /** 智能体所属的业务域,用于 agent-factory API */
+  businessDomain?: string;
 }
 
 /**
@@ -43,6 +46,9 @@ export class ChatKitDataAgent extends ChatKitBase<ChatKitDataAgentProps> {
   /** 是否开启增量流式返回 */
   private incStream: boolean;
 
+  /** 业务域 */
+  private businessDomain: string;
+
   constructor(props: ChatKitDataAgentProps) {
     super(props);
 
@@ -50,11 +56,13 @@ export class ChatKitDataAgent extends ChatKitBase<ChatKitDataAgentProps> {
     this.agentId = props.agentId;
     this.bearerToken = props.bearerToken;
     this.incStream = props.enableIncrementalStream ?? true;
+    this.businessDomain = props.businessDomain || 'bd_public';
   }
 
   /**
    * 获取开场白和预置问题
-   * Data Agent 的 API 文档中没有明确的获取开场白接口，这里实现一个默认版本
+   * 调用 AISHU Data Agent 的 agent-factory API 获取智能体配置信息，提取开场白和预置问题
+   * API 端点: GET /api/agent-factory/v3/agent-market/agent/{agent_id}/version/v0
    * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
    * @returns 返回开场白信息，包含开场白文案和预置问题
    */
@@ -62,19 +70,58 @@ export class ChatKitDataAgent extends ChatKitBase<ChatKitDataAgentProps> {
     try {
       console.log('正在获取 Data Agent 配置...');
 
-      // 尝试调用 Agent 信息接口（如果存在）
-      // 注意：根据 API 文档，暂时没有明确的获取开场白的接口
-      // 这里返回默认的开场白信息
-      const onboardingInfo: OnboardingInfo = {
-        prologue: '你好！我是数据智能体助手，我可以帮你分析数据、回答问题。',
-        predefinedQuestions: [
-          '帮我分析一下最近的数据趋势',
-          '查询相关数据信息',
-          '数据异常该如何处理',
-        ],
-      };
+      // 构造 agent-factory API 的完整 URL
+      // baseUrl 通常是 https://dip.aishu.cn/api/agent-app/v1 或开发环境的 /data-agent
+      // 我们需要替换路径为 /api/agent-factory/v3/agent-market/agent/{agent_id}/version/v0
+      let agentFactoryUrl: string;
+      if (this.baseUrl.startsWith('http://') || this.baseUrl.startsWith('https://')) {
+        // 生产环境：使用完整 URL
+        const baseUrlObj = new URL(this.baseUrl);
+        agentFactoryUrl = `${baseUrlObj.protocol}//${baseUrlObj.host}/api/agent-factory/v3/agent-market/agent/${encodeURIComponent(this.agentId)}/version/v0`;
+      } else {
+        // 开发环境：使用相对路径走代理
+        agentFactoryUrl = `/api/agent-factory/v3/agent-market/agent/${encodeURIComponent(this.agentId)}/version/v0`;
+      }
 
-      console.log('Data Agent 开场白信息:', onboardingInfo);
+      console.log('调用 agent-factory API:', agentFactoryUrl);
+
+      const response = await fetch(agentFactoryUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': this.bearerToken,
+          'Content-Type': 'application/json',
+          'x-business-domain': this.businessDomain,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`获取 Data Agent 配置失败: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      // 从响应中提取开场白和预置问题
+      // 根据 agent-factory API 文档,响应格式为: { id, name, config: {...}, ... }
+      const config = result.config || {};
+      const openingRemarkConfig = config.opening_remark_config || {};
+      const presetQuestions = config.preset_questions || [];
+
+      // 构造开场白信息
+      let prologue = '你好！我是数据智能体助手，我可以帮你分析数据、回答问题。';
+      if (openingRemarkConfig.type === 'fixed' && openingRemarkConfig.fixed_opening_remark) {
+        prologue = openingRemarkConfig.fixed_opening_remark;
+      }
+
+      // 提取预置问题
+      const predefinedQuestions = presetQuestions
+        .map((item: any) => item.question)
+        .filter((q: any) => typeof q === 'string' && q.trim().length > 0);
+
+      const onboardingInfo: OnboardingInfo = {
+        prologue,
+        predefinedQuestions,
+      };
       return onboardingInfo;
     } catch (error) {
       console.error('获取 Data Agent 配置失败:', error);
