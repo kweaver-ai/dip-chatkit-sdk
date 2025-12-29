@@ -1,9 +1,6 @@
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import type { Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
-import { ChatMessage, ChatMessageType, RoleType } from '../types';
+import { ChatMessage, RoleType, BlockType } from '../types';
+import { TextBlockComponent, MarkdownBlockComponent, WebSearchBlockComponent } from './blocks';
 
 /**
  * MessageItem 组件的属性接口
@@ -19,60 +16,36 @@ interface MessageItemProps {
  */
 const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   const isUser = message.role.type === RoleType.USER;
-  const isAssistantMarkdown =
-    message.role.type === RoleType.ASSISTANT &&
-    message.type === ChatMessageType.TEXT;
 
-  const renderContent = () => {
-    if (isAssistantMarkdown) {
-      const markdownComponents: Components = {
-        code: ({ className, children, ...props }: any) => {
-          const isInline = !className;
-
-          if (isInline) {
-            return (
-              <code
-                className="bg-gray-200 rounded px-1 py-0.5 text-xs font-mono"
-                {...props}
-              >
-                {children}
-              </code>
-            );
-          }
-
-          return (
-            <pre
-              className="bg-gray-900 text-gray-100 rounded-lg p-3 overflow-auto text-xs"
-              {...props}
-            >
-              <code className={className}>{children}</code>
-            </pre>
-          );
-        },
-        ul: ({ children }) => (
-          <ul className="list-disc pl-5 space-y-1">{children}</ul>
-        ),
-        ol: ({ children }) => (
-          <ol className="list-decimal pl-5 space-y-1">{children}</ol>
-        ),
-      };
-
+  /**
+   * 渲染消息内容块
+   * 根据不同的 BlockType 使用不同的组件进行渲染
+   */
+  const renderContentBlocks = () => {
+    // 如果 content 是数组，则渲染 Block 数组
+    if (Array.isArray(message.content)) {
       return (
-        <div className="text-sm leading-relaxed space-y-2 markdown-body">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeHighlight]}
-            components={markdownComponents}
-          >
-            {message.content}
-          </ReactMarkdown>
+        <div className="space-y-2">
+          {message.content.map((block, index) => {
+            switch (block.type) {
+              case BlockType.TEXT:
+                return <TextBlockComponent key={index} block={block} />;
+              case BlockType.MARKDOWN:
+                return <MarkdownBlockComponent key={index} block={block} />;
+              case BlockType.WEB_SEARCH:
+                return <WebSearchBlockComponent key={index} block={block} />;
+              default:
+                return null;
+            }
+          })}
         </div>
       );
     }
 
+    // 向后兼容：如果 content 是字符串，则按文本渲染
     return (
       <p className="text-[14px] whitespace-pre-wrap break-words leading-[24px]">
-        {message.content}
+        {message.content as unknown as string}
       </p>
     );
   };
@@ -105,7 +78,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           }`}
           style={{ fontFamily: 'Noto Sans SC' }}
         >
-          {renderContent()}
+          {renderContentBlocks()}
         </div>
       </div>
     </div>

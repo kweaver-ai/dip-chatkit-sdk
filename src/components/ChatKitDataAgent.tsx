@@ -2,11 +2,60 @@ import { ChatKitBase, ChatKitBaseProps } from './ChatKitBase';
 import {
   ApplicationContext,
   ChatMessage,
-  ChatMessageType,
-  EventStreamMessage,
   RoleType,
   OnboardingInfo,
+  WebSearchQuery,
+  WebSearchResult,
 } from '../types';
+
+/**
+ * Data Agent 的 AssistantMessage 接口
+ * 对应 agent-app.schemas.yaml#/components/schemas/Message
+ */
+interface AssistantMessage {
+  message?: {
+    id?: string;
+    conversation_id?: string;
+    role?: string;
+    content?: {
+      final_answer?: {
+        thinking?: string;
+        answer?: {
+          text?: string;
+        };
+      };
+      middle_answer?: {
+        progress?: Progress[];
+      };
+    };
+  };
+  error?: string;
+}
+
+/**
+ * Progress 接口
+ * 智能体执行过程中的一个步骤
+ */
+interface Progress {
+  stage?: string;
+  answer?: string;
+  skill_info?: {
+    name?: string;
+    input?: any;
+    output?: any;
+  };
+}
+
+/**
+ * EventMessage 接口
+ * Data Agent 的 Event Stream Message
+ */
+interface EventMessage {
+  seq_id?: number;
+  key?: Array<string | number>;
+  action?: 'append' | 'upsert' | 'end';
+  content?: any;
+}
 
 /**
  * ChatKitDataAgent 组件的属性接口
@@ -21,8 +70,11 @@ export interface ChatKitDataAgentProps extends ChatKitBaseProps {
   /** 服务端基础地址,应包含 /api/agent-app/v1 前缀 */
   baseUrl?: string;
 
-  /** 是否开启增量流式返回,默认 true */
-  enableIncrementalStream?: boolean;
+  /** agent 版本，"v0"表示最新版本，默认 "v0" */
+  agentVersion?: string;
+
+  /** 智能体执行引擎版本，最新为"v2"，默认 "v2" */
+  executorVersion?: string;
 
   /** 智能体所属的业务域,用于 agent-factory API */
   businessDomain?: string;
@@ -40,8 +92,11 @@ export class ChatKitDataAgent extends ChatKitBase<ChatKitDataAgentProps> {
   /** Agent ID */
   private agentId: string;
 
-  /** 是否开启增量流式返回 */
-  private incStream: boolean;
+  /** agent 版本 */
+  private agentVersion: string;
+
+  /** 智能体执行引擎版本 */
+  private executorVersion: string;
 
   /** 业务域 */
   private businessDomain: string;
@@ -51,7 +106,8 @@ export class ChatKitDataAgent extends ChatKitBase<ChatKitDataAgentProps> {
 
     this.baseUrl = props.baseUrl || 'https://dip.aishu.cn/api/agent-app/v1';
     this.agentId = props.agentId;
-    this.incStream = props.enableIncrementalStream ?? true;
+    this.agentVersion = props.agentVersion || 'v0';
+    this.executorVersion = props.executorVersion || 'v2';
     this.businessDomain = props.businessDomain || 'bd_public';
 
     // 向后兼容：如果传入了 bearerToken 但没有 token，从 bearerToken 中提取 token
@@ -217,9 +273,10 @@ export class ChatKitDataAgent extends ChatKitBase<ChatKitDataAgentProps> {
     // 构造请求体，使用传入的 conversationID 参数
     const body = {
       agent_id: this.agentId,
+      agent_version: this.agentVersion,
+      executor_version: this.executorVersion,
       query: fullQuery,
       stream: true,
-      inc_stream: this.incStream,
       custom_querys: ctx?.data,
       conversation_id: conversationID || undefined,
     };
@@ -253,8 +310,7 @@ export class ChatKitDataAgent extends ChatKitBase<ChatKitDataAgentProps> {
     const assistantMessageId = `assistant-${Date.now()}`;
     const initialAssistantMessage: ChatMessage = {
       messageId: assistantMessageId,
-      content: '',
-      type: ChatMessageType.TEXT,
+      content: [], // 初始化为空数组，后续会通过 append*Block 方法添加内容块
       role: {
         name: 'AI 助手',
         type: RoleType.ASSISTANT,
@@ -272,128 +328,322 @@ export class ChatKitDataAgent extends ChatKitBase<ChatKitDataAgentProps> {
       throw new Error('无法获取流式响应');
     }
 
-    const finalContent = await this.handleStreamResponse(reader, assistantMessageId);
+    // 处理流式响应，返回最终的 AssistantMessage 对象
+    await this.handleStreamResponse<AssistantMessage>(reader, assistantMessageId);
+
+    // 从 state 中获取最终更新后的消息
+    const finalMessage = this.state.messages.find((msg) => msg.messageId === assistantMessageId);
+
+    return finalMessage || initialAssistantMessage;
+  }
+
+  /**
+   * 将 API 接口返回的 EventStream 增量解析成完整的 AssistantMessage 对象
+   * 根据设计文档实现白名单机制和 JSONPath 处理
+   * @param eventMessage 接收到的一条 Event Message
+   * @param prev 上一次增量更新后的 AssistantMessage 对象
+   * @param messageId 当前正在更新的消息 ID
+   * @returns 返回更新后的 AssistantMessage 对象
+   */
+  public reduceAssistantMessage<T = any, K = any>(eventMessage: T, prev: K, messageId: string): K {
+    try {
+      // 解析 EventMessage
+      const parsed = typeof eventMessage === 'string' ? JSON.parse(eventMessage) : eventMessage;
+      const em = this.parseEventMessage(parsed);
+
+      // 如果 action 是 'end'，直接返回
+      if (em.action === 'end') {
+        console.log('EventStream 结束');
+        return prev;
+      }
+
+      // 检查是否在白名单中
+      const jsonPath = this.keyToJSONPath(em.key || []);
+      const whitelistEntry = this.getWhitelistEntry(em.action || '', jsonPath);
+
+      if (!whitelistEntry) {
+        // 不在白名单中，跳过
+        console.log('跳过非白名单事件:', em.action, jsonPath);
+        return prev;
+      }
+
+      // 克隆 prev 对象以避免直接修改
+      let assistantMessage: AssistantMessage = JSON.parse(JSON.stringify(prev || {}));
+
+      // 根据 action 处理 content
+      if (em.action === 'upsert') {
+        assistantMessage = this.applyUpsert(assistantMessage, em.key || [], em.content);
+      } else if (em.action === 'append') {
+        assistantMessage = this.applyAppend(assistantMessage, em.key || [], em.content);
+      }
+
+      // 执行后处理，传入 messageId
+      if (whitelistEntry.postProcess) {
+        whitelistEntry.postProcess(assistantMessage, em.content, messageId);
+      }
+
+      return assistantMessage as K;
+    } catch (e) {
+      console.error('解析 Data Agent 事件失败:', e, eventMessage);
+      return prev;
+    }
+  }
+
+  /**
+   * 解析原始事件为 EventMessage
+   */
+  private parseEventMessage(raw: any): EventMessage {
+    // 从 SSE data 中提取
+    if (raw.data) {
+      const dataStr = typeof raw.data === 'string' ? raw.data : JSON.stringify(raw.data);
+      try {
+        const parsed = JSON.parse(dataStr);
+        return {
+          seq_id: parsed.seq_id || parsed.seq,
+          key: parsed.key,
+          action: parsed.action,
+          content: parsed.content,
+        };
+      } catch {
+        return raw;
+      }
+    }
 
     return {
-      ...initialAssistantMessage,
-      content: finalContent,
+      seq_id: raw.seq_id || raw.seq,
+      key: raw.key,
+      action: raw.action,
+      content: raw.content,
     };
   }
 
   /**
-   * 解析 Data Agent 的 EventStreamMessage
-   * 当 key 仅包含 ["message"] 时，取首词输出；后续仅从包含 ["message", "final_answer"] 的事件取内容
+   * 将 key 数组转换为 JSONPath 字符串
+   * 例如: ["message", "content", "final_answer", "answer", "text"]
+   * => "message.content.final_answer.answer.text"
    */
-  public reduceEventStreamMessage(
-    eventMessage: EventStreamMessage,
-    prevBuffer: string
-  ): string {
+  private keyToJSONPath(key: Array<string | number>): string {
+    return key.map((k, index) => {
+      if (typeof k === 'number') {
+        return `[${k}]`;
+      }
+      return index === 0 ? k : `.${k}`;
+    }).join('').replace(/\.\[/g, '[');
+  }
+
+  /**
+   * 白名单定义
+   * 根据设计文档 3.2 Event Message 白名单
+   */
+  private getWhitelistEntry(action: string, jsonPath: string): {
+    postProcess?: (assistantMessage: AssistantMessage, content: any, messageId: string) => void;
+  } | null {
+    const entries: {
+      [key: string]: {
+        postProcess?: (assistantMessage: AssistantMessage, content: any, messageId: string) => void
+      }
+    } = {
+      'upsert:error': {},
+      'upsert:message': {},
+      'append:message.content.final_answer.answer.text': {
+        postProcess: (assistantMessage, _content, messageId) => {
+          // 从 AssistantMessage 中提取完整的文本内容
+          const text = assistantMessage.message?.content?.final_answer?.answer?.text || '';
+          // 调用 appendMarkdownBlock 方法更新界面上的 Markdown 块
+          this.appendMarkdownBlock(messageId, text);
+        },
+      },
+      'append:message.content.middle_answer.progress': {
+        postProcess: (_assistantMessage, content, messageId) => {
+          // content 是一个 Progress 对象
+          if (content?.stage === 'skill') {
+            // 检查是否是 Web 搜索工具
+            if (content.skill_info?.name === 'zhipu_search_tool') {
+              console.log('检测到 zhipu_search_tool');
+              console.log('完整的 content:', JSON.stringify(content, null, 2));
+              // 构造 WebSearchQuery 并调用渲染方法
+              const searchQuery = this.extractWebSearchQuery(content);
+              console.log('提取的 searchQuery:', searchQuery);
+              if (searchQuery) {
+                console.log('调用 appendWebSearchBlock，messageId:', messageId);
+                this.appendWebSearchBlock(messageId, searchQuery);
+              } else {
+                console.log('searchQuery 为 null，未调用 appendWebSearchBlock');
+              }
+            } else {
+              // 其他工具，输出工具名称
+              console.log('调用工具:', content.skill_info?.name);
+            }
+          } else if (content?.stage === 'llm') {
+            // LLM 阶段，输出 answer
+            const answer = content.answer || '';
+            this.appendMarkdownBlock(messageId, answer);
+          }
+        },
+      },
+    };
+
+    // 对于数组索引的情况，使用正则匹配
+    const progressArrayPattern = /^message\.content\.middle_answer\.progress\[\d+\]$/;
+    const progressArrayAnswerPattern = /^message\.content\.middle_answer\.progress\[\d+\]\.answer$/;
+
+    if (action === 'append' && progressArrayPattern.test(jsonPath)) {
+      return entries['append:message.content.middle_answer.progress'];
+    }
+
+    if (action === 'append' && progressArrayAnswerPattern.test(jsonPath)) {
+      return {
+        postProcess: (assistantMessage, _content, messageId) => {
+          // 提取最后一个 progress 的 answer
+          const progress = assistantMessage.message?.content?.middle_answer?.progress || [];
+          if (progress.length > 0) {
+            const lastProgress = progress[progress.length - 1];
+            const answer = lastProgress.answer || '';
+            this.appendMarkdownBlock(messageId, answer);
+          }
+        },
+      };
+    }
+
+    const key = `${action}:${jsonPath}`;
+    return entries[key] || null;
+  }
+
+  /**
+   * 从 Progress 对象中提取 Web 搜索查询
+   * 根据 OpenAPI 规范，搜索数据在 answer.choices[0].message.tool_calls 中
+   * tool_calls[0] 是 SearchIntent（输入），tool_calls[1] 是 SearchResult（输出）
+   */
+  private extractWebSearchQuery(progress: any): WebSearchQuery | null {
     try {
-      const parsed = JSON.parse(eventMessage.data);
-      const payload = parsed.data || parsed;
-      const action = parsed.action || payload?.action || '';
-      const conversationId = parsed.conversation_id || payload?.conversation_id;
+      // 从 answer.choices[0].message.tool_calls 中提取数据
+      const toolCalls = progress?.answer?.choices?.[0]?.message?.tool_calls;
 
-      if (conversationId && conversationId !== this.state.conversationID) {
-        this.setState({ conversationID: conversationId });
+      if (!toolCalls || !Array.isArray(toolCalls) || toolCalls.length < 2) {
+        console.log('tool_calls 不存在或长度不足:', toolCalls);
+        return null;
       }
 
-      const key = payload?.key;
-      const keyPath = Array.isArray(key)
-        ? key.map(String)
-        : typeof key === 'string'
-          ? [key]
-          : [];
-      const isMessageOnly = keyPath.length === 1 && keyPath[0] === 'message';
-      const hasMessageAndFinal = keyPath.includes('message') && keyPath.includes('final_answer');
+      // tool_calls[0] 是 SearchIntent（输入）
+      const searchIntentObj = toolCalls[0];
+      console.log('searchIntent 对象:', JSON.stringify(searchIntentObj, null, 2));
 
-      let nextBuffer = prevBuffer;
+      // search_intent 是一个数组，取第一个元素
+      const searchIntentArray = searchIntentObj?.search_intent;
+      const searchIntent = Array.isArray(searchIntentArray) ? searchIntentArray[0] : searchIntentArray;
 
-      // 首词输出
-      if (isMessageOnly) {
-        const firstChunk = this.extractFirstWord(
-          payload?.content?.content?.final_answer?.answer?.text
-        );
-        if (firstChunk) {
-          nextBuffer = prevBuffer + firstChunk;
-        }
-      } else if (hasMessageAndFinal) {
-        // 后续增量输出
-        const delta = this.extractContentChunk(payload?.content);
+      const query = searchIntent?.query || searchIntent?.keywords || '';
+      console.log('提取的 query:', query);
 
-        if (delta) {
-          nextBuffer = prevBuffer + delta;
-        }
+      // tool_calls[1] 是 SearchResult（输出）
+      const searchResultObj = toolCalls[1];
+      console.log('searchResult 对象:', JSON.stringify(searchResultObj, null, 2));
+
+      const searchResultArray = searchResultObj?.search_result;
+
+      if (!searchResultArray || !Array.isArray(searchResultArray)) {
+        console.log('search_result 不存在或不是数组:', searchResultArray);
+        return null;
       }
 
-      // action 为 end 代表最后一条输出
-      if (action === 'end') {
-        return nextBuffer;
-      }
+      const results: WebSearchResult[] = searchResultArray.map((item: any) => ({
+        content: item.content || '',
+        icon: item.icon || '',
+        link: item.link || '',
+        media: item.media || '',
+        title: item.title || '',
+      }));
 
-      return nextBuffer;
+      console.log('构造的 WebSearchQuery:', { input: query, resultsCount: results.length });
+
+      return {
+        input: query,
+        results,
+      };
     } catch (e) {
-      console.error('解析 Data Agent 事件失败:', e, eventMessage);
-      return prevBuffer;
+      console.error('提取 Web 搜索查询失败:', e);
+      return null;
     }
   }
 
   /**
-   * 提取首词，用于第一条文本输出
+   * 执行 upsert 操作
+   * 将 content 赋值到 JSONPath 指定的位置
    */
-  private extractFirstWord(raw: any): string {
-    if (typeof raw !== 'string') {
-      return '';
-    }
+  private applyUpsert(obj: AssistantMessage, key: Array<string | number>, content: any): AssistantMessage {
+    if (key.length === 0) return obj;
 
-    const trimmed = raw.trim();
-    if (!trimmed) return '';
-
-    const parts = trimmed.split(/\s+/);
-    if (parts.length > 1) {
-      return parts[0];
-    }
-
-    return trimmed.charAt(0);
+    // 使用递归方式设置嵌套属性
+    const cloned = { ...obj };
+    this.setNestedProperty(cloned, key, content);
+    return cloned;
   }
 
   /**
-   * 提取后续增量输出的内容
+   * 执行 append 操作
+   * 如果 JSONPath 是数组下标，在该位置插入新对象
+   * 否则在文本后追加内容
    */
-  private extractContentChunk(raw: any): string {
-    if (!raw) return '';
+  private applyAppend(obj: AssistantMessage, key: Array<string | number>, content: any): AssistantMessage {
+    if (key.length === 0) return obj;
 
-    if (typeof raw === 'string') {
-      return raw;
-    }
+    const cloned = { ...obj };
+    const lastKey = key[key.length - 1];
 
-    if (typeof raw === 'object') {
-      if (typeof raw.text === 'string') {
-        return raw.text;
+    if (typeof lastKey === 'number') {
+      // 数组追加：在指定索引位置插入
+      const parentKey = key.slice(0, -1);
+      const parent = this.getNestedProperty(cloned, parentKey) as any[];
+
+      if (Array.isArray(parent)) {
+        parent[lastKey] = content;
       }
+    } else {
+      // 文本追加：在现有内容后追加
+      const currentValue = this.getNestedProperty(cloned, key);
 
-      if (typeof raw.value === 'string') {
-        return raw.value;
-      }
-
-      if (typeof raw.message === 'string') {
-        return raw.message;
-      }
-
-      if (typeof raw.content === 'string') {
-        return raw.content;
-      }
-
-      if (typeof raw.answer?.text === 'string') {
-        return raw.answer.text;
-      }
-
-      if (typeof raw.final_answer?.answer?.text === 'string') {
-        return raw.final_answer.answer.text;
+      if (typeof currentValue === 'string' && typeof content === 'string') {
+        this.setNestedProperty(cloned, key, currentValue + content);
+      } else {
+        this.setNestedProperty(cloned, key, content);
       }
     }
 
-    return '';
+    return cloned;
+  }
+
+  /**
+   * 获取嵌套属性
+   */
+  private getNestedProperty(obj: any, key: Array<string | number>): any {
+    let current = obj;
+    for (const k of key) {
+      if (current == null) return undefined;
+      current = current[k];
+    }
+    return current;
+  }
+
+  /**
+   * 设置嵌套属性
+   */
+  private setNestedProperty(obj: any, key: Array<string | number>, value: any): void {
+    if (key.length === 0) return;
+
+    let current = obj;
+    for (let i = 0; i < key.length - 1; i++) {
+      const k = key[i];
+      const nextKey = key[i + 1];
+
+      if (current[k] == null) {
+        // 根据下一个 key 的类型决定创建对象还是数组
+        current[k] = typeof nextKey === 'number' ? [] : {};
+      }
+      current = current[k];
+    }
+
+    const lastKey = key[key.length - 1];
+    current[lastKey] = value;
   }
 
   /**

@@ -23,6 +23,19 @@ export enum ChatMessageType {
 }
 
 /**
+ * 消息块类型枚举
+ * 消息块的类型，不同类型的消息块使用不同的组件进行渲染
+ */
+export enum BlockType {
+  /** 文本类型 */
+  TEXT = 'Text',
+  /** Markdown 类型 */
+  MARKDOWN = 'Markdown',
+  /** Web 搜索类型 */
+  WEB_SEARCH = 'WebSearch'
+}
+
+/**
  * 角色接口
  * 定义消息发送者的角色信息
  */
@@ -41,6 +54,32 @@ export interface Role {
 }
 
 /**
+ * 消息块基类
+ * 一条消息可以由许多不同类型的消息块组成
+ */
+export interface ContentBlock<T extends BlockType, K> {
+  /** 消息块的类型，不同类型的消息块使用不同的组件进行渲染 */
+  type: T;
+  /** 消息块的内容 */
+  content: K;
+}
+
+/**
+ * 文本类型的消息块
+ */
+export interface TextBlock extends ContentBlock<BlockType.TEXT, string> {}
+
+/**
+ * Markdown 类型的消息块
+ */
+export interface MarkdownBlock extends ContentBlock<BlockType.MARKDOWN, string> {}
+
+/**
+ * Web 搜索类型的消息块
+ */
+export interface WebSearchBlock extends ContentBlock<BlockType.WEB_SEARCH, WebSearchQuery> {}
+
+/**
  * 消息接口
  * 展示在消息区消息列表中的一条消息
  */
@@ -51,11 +90,11 @@ export interface ChatMessage {
   /** 发送该消息的角色 */
   role: Role;
 
-  /** 该条消息的类型 */
-  type: ChatMessageType;
+  /** 该条消息的类型（已废弃，保留用于向后兼容） */
+  type?: ChatMessageType;
 
-  /** 该条消息的内容 */
-  content: string;
+  /** 该条消息的内容。一条消息可以由许多不同类型的消息块组成 */
+  content: Array<TextBlock | MarkdownBlock | WebSearchBlock>;
 
   /** 与该消息关联的应用上下文（可选），仅用户消息可能包含此字段 */
   applicationContext?: ApplicationContext;
@@ -93,6 +132,34 @@ export interface OnboardingInfo {
   prologue: string;
   /** 预置问题列表 */
   predefinedQuestions: Array<string>;
+}
+
+/**
+ * Web 搜索结果接口
+ * 单条 Web 搜索的结果
+ */
+export interface WebSearchResult {
+  /** 搜索结果的内容摘要 */
+  content: string;
+  /** 搜索结果的来源网站图标 URL */
+  icon: string;
+  /** 搜索结果的来源地址 */
+  link: string;
+  /** 搜索结果的来源网站名称 */
+  media: string;
+  /** 搜索结果的来源文章标题 */
+  title: string;
+}
+
+/**
+ * Web 搜索查询接口
+ * 调用 Web 搜索的详情
+ */
+export interface WebSearchQuery {
+  /** 搜索查询 */
+  input: string;
+  /** Web 搜索结果集合 */
+  results: WebSearchResult[];
 }
 
 /**
@@ -135,19 +202,20 @@ export interface ChatKitInterface {
   ): Promise<ChatMessage>;
 
   /**
-   * 解析 EventStreamMessage 并累积文本
-   * 当接收到 SSE 消息时触发，该方法需要由开发者实现
-   * 将不同的 API 接口返回的 SSE 进行解析成 ChatKit 组件能够处理的标准数据格式后返回
-   * 返回解析并积累起来后的 buffer，该 buffer 可以被直接打印到界面上
-   * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
-   * @param eventMessage 接收到的一条 EventStreamMessage
-   * @param prevBuffer 之前已经堆积起来的文本
-   * @returns 返回解析并积累起来后的 buffer
+   * 将 API 接口返回的 EventStream 增量解析成完整的 AssistantMessage 对象
+   * 当接收到 SSE 消息时触发，该方法需要由子类实现
+   * 子类在该方法中应该调用 appendMarkdownBlock() 或 appendWebSearchBlock() 来更新消息内容
+   * 注意：该方法应该只处理数据解析逻辑，通过调用 append*Block 方法来更新界面
+   * @param eventMessage 接收到的一条 Event Message
+   * @param prev 上一次增量更新后的 AssistantMessage 对象
+   * @param messageId 当前正在更新的消息 ID，用于调用 append*Block 方法
+   * @returns 返回更新后的 AssistantMessage 对象
    */
-  reduceEventStreamMessage(
-    eventMessage: EventStreamMessage,
-    prevBuffer: string
-  ): string;
+  reduceAssistantMessage<T = any, K = any>(
+    eventMessage: T,
+    prev: K,
+    messageId: string
+  ): K;
 
   /**
    * 检查是否需要刷新 token
