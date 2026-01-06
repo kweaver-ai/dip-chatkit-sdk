@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChatMessage, RoleType, BlockType } from '../../../types';
-import { TextBlock, MarkdownBlock, WebSearchBlock, ToolBlock } from './blocks';
+import { TextBlock, MarkdownBlock, WebSearchBlock, Json2PlotBlock } from './blocks';
 
 /**
  * MessageItem 组件的属性接口
@@ -23,6 +23,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
    */
   const renderContentBlocks = () => {
     // 如果 content 是数组，则渲染 Block 数组
+   
     if (Array.isArray(message.content)) {
       return (
         <div className="space-y-2">
@@ -34,8 +35,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                 return <MarkdownBlock key={index} block={block} />;
               case BlockType.WEB_SEARCH:
                 return <WebSearchBlock key={index} block={block} />;
-              case BlockType.TOOL:
-                return <ToolBlock key={index} block={block} />;
+              case BlockType.JSON2PLOT:
+                return <Json2PlotBlock key={index} block={block} />;
               default:
                 return null;
             }

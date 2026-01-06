@@ -5,6 +5,7 @@ import {
   WebSearchQuery,
   WebSearchResult,
   RoleType,
+  ChartDataSchema,
   ConversationHistory,
   BlockType,
 } from '../../types';
@@ -515,6 +516,28 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       'append:message.content.middle_answer.progress': {
         postProcess: (_assistantMessage, content, messageId) => {
           // content 是一个 Progress 对象
+          if (content?.stage === 'skill') {
+            // 检查是否是 Web 搜索工具
+            if (content.skill_info?.name === 'zhipu_search_tool') {
+              // 构造 WebSearchQuery 并调用渲染方法
+              const searchQuery = this.extractWebSearchQuery(content);
+              if (searchQuery) {
+                (this as any).appendWebSearchBlock(messageId, searchQuery);
+              }
+            }
+            console.log('content', content);
+            // 检查是否是 Json2Plot 工具
+            if (content?.skill_info?.name === 'json2plot') {
+              const chartData = this.extractJson2PlotData(content);
+              if (chartData) {
+                (this as any).appendJson2PlotBlock(messageId, chartData);
+              }
+            }
+          } else if (content?.stage === 'llm') {
+            // LLM 阶段，输出 answer
+            const answer = content.answer || '';
+            (this as any).appendMarkdownBlock(messageId, answer);
+          }
           this.processMiddleAnswerProgress(content, messageId);
         },
       },
@@ -599,6 +622,205 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
   }
 
   /**
+   * 从 Progress 对象中提取 Json2Plot 图表数据
+   * 根据 OpenAPI 规范，Json2Plot 数据在 answer.choices[0].message.tool_calls 中
+   * tool_calls 中包含 Json2PlotAnswer，格式为 { result: Json2PlotResult, full_result: Json2PlotFullResult }
+   * Json2PlotResult 包含: data_sample, chart_config, title, text
+   * Json2PlotFullResult 包含: data, chart_config, title, text
+   * ChartConfig 包含: xField, yField, seriesField, chart_type, groupField, isStack, isGroup
+   */
+  public extractJson2PlotData(progress: any): ChartDataSchema | null {
+    try {
+      // 从 answer.choices[0].message.tool_calls 中提取数据
+      console.log(' Json2Plot progress', progress);
+      const toolCalls = progress?.answer?.choices?.[0]?.message?.tool_calls;
+
+      if (!toolCalls || !Array.isArray(toolCalls)) {
+        return null;
+      }
+
+      // 查找 Json2PlotAnswer（包含 result 或 full_result 的对象）
+      let json2PlotAnswer: any = null;
+      for (const toolCall of toolCalls) {
+        if (toolCall?.result || toolCall?.full_result) {
+          json2PlotAnswer = toolCall;
+          break;
+        }
+      }
+
+      if (!json2PlotAnswer) {
+        return null;
+      }
+
+      // 优先使用 full_result，如果没有则使用 result
+      const json2PlotData = json2PlotAnswer.full_result || json2PlotAnswer.result;
+      
+      if (!json2PlotData) {
+        return null;
+      }
+
+      const chartConfig = json2PlotData.chart_config;
+      if (!chartConfig || !chartConfig.chart_type) {
+        return null;
+      }
+
+      // 验证 chart_type 是否为有效值
+      const validChartTypes = ['Line', 'Column', 'Pie', 'Circle'];
+      const chartType = chartConfig.chart_type;
+      if (!validChartTypes.includes(chartType)) {
+        return null;
+      }
+
+      // 获取数据行（优先使用 full_result.data，否则使用 result.data_sample）
+      const dataRows = json2PlotData.data || json2PlotData.data_sample || [];
+      
+      if (!Array.isArray(dataRows) || dataRows.length === 0) {
+        return null;
+      }
+
+      // 从数据行中推断字段类型
+      const firstRow = dataRows[0];
+      if (!firstRow || typeof firstRow !== 'object') {
+        return null;
+      }
+
+      // 构建 dimensions（维度字段）
+      const dimensions: Array<{ name: string; displayName: string; dataType: 'string' | 'number' | 'date' | 'boolean' }> = [];
+      
+      // xField 作为第一个维度
+      if (chartConfig.xField && firstRow[chartConfig.xField] !== undefined) {
+        const value = firstRow[chartConfig.xField];
+        const dataType = this.inferDataType(value);
+        dimensions.push({
+          name: chartConfig.xField,
+          displayName: chartConfig.xField,
+          dataType,
+        });
+      }
+
+      // groupField 作为维度（如果存在）
+      if (chartConfig.groupField && 
+          chartConfig.groupField !== chartConfig.xField &&
+          firstRow[chartConfig.groupField] !== undefined) {
+        const value = firstRow[chartConfig.groupField];
+        const dataType = this.inferDataType(value);
+        dimensions.push({
+          name: chartConfig.groupField,
+          displayName: chartConfig.groupField,
+          dataType,
+        });
+      }
+
+      // seriesField 作为维度（如果存在且不是xField和groupField）
+      // seriesField 通常用于创建多个系列，应该作为维度
+      if (chartConfig.seriesField && 
+          chartConfig.seriesField !== chartConfig.xField && 
+          chartConfig.seriesField !== chartConfig.groupField &&
+          firstRow[chartConfig.seriesField] !== undefined) {
+        const value = firstRow[chartConfig.seriesField];
+        const dataType = this.inferDataType(value);
+        dimensions.push({
+          name: chartConfig.seriesField,
+          displayName: chartConfig.seriesField,
+          dataType,
+        });
+      }
+
+      // 构建 measures（度量字段）
+      const measures: Array<{ name: string; displayName: string; dataType: 'number' | 'string'; aggregation?: 'sum' | 'avg' | 'count' | 'max' | 'min' }> = [];
+      
+      // yField 作为第一个度量
+      if (chartConfig.yField && firstRow[chartConfig.yField] !== undefined) {
+        measures.push({
+          name: chartConfig.yField,
+          displayName: chartConfig.yField,
+          dataType: 'number',
+        });
+      }
+
+      // 如果没有找到任何维度或度量，尝试从数据中推断
+      if (dimensions.length === 0 || measures.length === 0) {
+        // 遍历所有字段，推断类型
+        const fieldTypes = new Map<string, 'string' | 'number' | 'date' | 'boolean'>();
+        
+        for (const [key, value] of Object.entries(firstRow)) {
+          if (value !== null && value !== undefined) {
+            fieldTypes.set(key, this.inferDataType(value));
+          }
+        }
+
+        // 如果缺少维度，使用第一个非数值字段
+        if (dimensions.length === 0) {
+          for (const [key, dataType] of fieldTypes.entries()) {
+            if (dataType !== 'number' && !measures.find(m => m.name === key)) {
+              dimensions.push({
+                name: key,
+                displayName: key,
+                dataType,
+              });
+              break;
+            }
+          }
+        }
+
+        // 如果缺少度量，使用第一个数值字段
+        if (measures.length === 0) {
+          for (const [key, dataType] of fieldTypes.entries()) {
+            if (dataType === 'number' && !dimensions.find(d => d.name === key)) {
+              measures.push({
+                name: key,
+                displayName: key,
+                dataType: 'number',
+              });
+              break;
+            }
+          }
+        }
+      }
+
+      // 验证是否成功构建了 dimensions 和 measures
+      if (dimensions.length === 0 || measures.length === 0) {
+        return null;
+      }
+
+      // 构造 ChartDataSchema
+      const chartData: ChartDataSchema = {
+        chartType: chartType as 'Line' | 'Column' | 'Pie' | 'Circle',
+        title: json2PlotData.title,
+        dimensions,
+        measures,
+        rows: dataRows,
+      };
+
+      return chartData;
+    } catch (e) {
+      console.error('提取 Json2Plot 数据失败:', e);
+      return null;
+    }
+  }
+
+  /**
+   * 推断数据类型
+   */
+  public inferDataType(value: any): 'string' | 'number' | 'date' | 'boolean' {
+    if (typeof value === 'boolean') {
+      return 'boolean';
+    }
+    if (typeof value === 'number') {
+      return 'number';
+    }
+    if (typeof value === 'string') {
+      // 尝试解析日期
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        return 'date';
+      }
+      return 'string';
+    }
+    return 'string';
+  }
+
+  /**
    * 处理技能调用的统一方法
    * 根据设计文档 3.2 Event Message 白名单中的后处理逻辑
    * @param skillInfo 技能信息
@@ -619,10 +841,11 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         (this as any).appendWebSearchBlock(messageId, searchQuery);
       }
     } else if (skillName === 'json2plot') {
-      // json2plot 工具：将 skill_info.args 解析出 ChartDataSchema 结构并输出到界面
-      const chartData = this.extractChartDataFromArgs(skillInfo.args);
+      console.log('skillInfo', skillInfo);
+      // json2plot 工具：将 skill_info.args 和 answer 解析出 ChartDataSchema 结构并输出到界面
+      const chartData = this.extractChartDataFromArgs(skillInfo.args, answer);
       if (chartData) {
-        (this as any).appendJson2plotBlock(messageId, chartData);
+        (this as any).appendJson2PlotBlock(messageId, chartData);
       }
     } else if (skillName === 'execute_code') {
       // 代码执行工具：解析代码输入和输出
@@ -709,27 +932,155 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
   }
 
   /**
-   * 从 skill_info.args 中提取图表数据
+   * 从 skill_info.args 和 answer 中提取图表数据并转换为 ChartDataSchema
    * 用于处理 json2plot 工具的输出
+   * @param args 技能参数数组（保留用于 API 一致性，实际数据从 answer 中提取）
+   * @param answer 技能执行的 answer 字段，包含 result 或 full_result
+   * @returns ChartDataSchema 对象，如果解析失败则返回 null
    */
-  public extractChartDataFromArgs(args: Array<{name?: string; type?: string; value?: string}> | undefined): any {
-    if (!args || !Array.isArray(args)) {
-      return null;
-    }
-
+  public extractChartDataFromArgs(
+    _args: Array<{name?: string; type?: string; value?: string}> | undefined,
+    answer: any
+  ): ChartDataSchema | null {
     try {
-      // 将 args 数组转换为对象
-      const chartData: any = {};
-      for (const arg of args) {
-        if (arg.name && arg.value !== undefined) {
-          // 尝试解析 JSON 字符串
-          try {
-            chartData[arg.name] = JSON.parse(arg.value);
-          } catch {
-            chartData[arg.name] = arg.value;
+      // 从 answer 中提取数据（优先使用 full_result，否则使用 result）
+      const json2PlotData = answer?.full_result || answer?.result;
+      if (!json2PlotData) {
+        return null;
+      }
+
+      const chartConfig = json2PlotData.chart_config;
+      if (!chartConfig || !chartConfig.chart_type) {
+        return null;
+      }
+
+      // 验证 chart_type 是否为有效值
+      const validChartTypes = ['Line', 'Column', 'Pie', 'Circle'];
+      const chartType = chartConfig.chart_type;
+      if (!validChartTypes.includes(chartType)) {
+        return null;
+      }
+
+      // 获取数据行（优先使用 full_result.data，否则使用 result.data_sample）
+      const dataRows = json2PlotData.data || json2PlotData.data_sample || [];
+      
+      if (!Array.isArray(dataRows) || dataRows.length === 0) {
+        return null;
+      }
+
+      // 从数据行中推断字段类型
+      const firstRow = dataRows[0];
+      if (!firstRow || typeof firstRow !== 'object') {
+        return null;
+      }
+
+      // 构建 dimensions（维度字段）
+      const dimensions: Array<{ name: string; displayName: string; dataType: 'string' | 'number' | 'date' | 'boolean' }> = [];
+      
+      // xField 作为第一个维度
+      if (chartConfig.xField && firstRow[chartConfig.xField] !== undefined) {
+        const value = firstRow[chartConfig.xField];
+        const dataType = this.inferDataType(value);
+        dimensions.push({
+          name: chartConfig.xField,
+          displayName: chartConfig.xField,
+          dataType,
+        });
+      }
+
+      // groupField 作为维度（如果存在）
+      if (chartConfig.groupField && 
+          chartConfig.groupField !== chartConfig.xField &&
+          firstRow[chartConfig.groupField] !== undefined) {
+        const value = firstRow[chartConfig.groupField];
+        const dataType = this.inferDataType(value);
+        dimensions.push({
+          name: chartConfig.groupField,
+          displayName: chartConfig.groupField,
+          dataType,
+        });
+      }
+
+      // seriesField 作为维度（如果存在且不是xField和groupField）
+      if (chartConfig.seriesField && 
+          chartConfig.seriesField !== chartConfig.xField && 
+          chartConfig.seriesField !== chartConfig.groupField &&
+          firstRow[chartConfig.seriesField] !== undefined) {
+        const value = firstRow[chartConfig.seriesField];
+        const dataType = this.inferDataType(value);
+        dimensions.push({
+          name: chartConfig.seriesField,
+          displayName: chartConfig.seriesField,
+          dataType,
+        });
+      }
+
+      // 构建 measures（度量字段）
+      const measures: Array<{ name: string; displayName: string; dataType: 'number' | 'string'; aggregation?: 'sum' | 'avg' | 'count' | 'max' | 'min' }> = [];
+      
+      // yField 作为第一个度量
+      if (chartConfig.yField && firstRow[chartConfig.yField] !== undefined) {
+        measures.push({
+          name: chartConfig.yField,
+          displayName: chartConfig.yField,
+          dataType: 'number',
+        });
+      }
+
+      // 如果没有找到任何维度或度量，尝试从数据中推断
+      if (dimensions.length === 0 || measures.length === 0) {
+        // 遍历所有字段，推断类型
+        const fieldTypes = new Map<string, 'string' | 'number' | 'date' | 'boolean'>();
+        
+        for (const [key, value] of Object.entries(firstRow)) {
+          if (value !== null && value !== undefined) {
+            fieldTypes.set(key, this.inferDataType(value));
+          }
+        }
+
+        // 如果缺少维度，使用第一个非数值字段
+        if (dimensions.length === 0) {
+          for (const [key, dataType] of fieldTypes.entries()) {
+            if (dataType !== 'number' && !measures.find(m => m.name === key)) {
+              dimensions.push({
+                name: key,
+                displayName: key,
+                dataType,
+              });
+              break;
+            }
+          }
+        }
+
+        // 如果缺少度量，使用第一个数值字段
+        if (measures.length === 0) {
+          for (const [key, dataType] of fieldTypes.entries()) {
+            if (dataType === 'number' && !dimensions.find(d => d.name === key)) {
+              measures.push({
+                name: key,
+                displayName: key,
+                dataType: 'number',
+              });
+              break;
+            }
           }
         }
       }
+
+      // 验证是否成功构建了 dimensions 和 measures
+      if (dimensions.length === 0 || measures.length === 0) {
+        return null;
+      }
+
+      // 构造 ChartDataSchema
+      const chartData: ChartDataSchema = {
+        chartType: chartType as 'Line' | 'Column' | 'Pie' | 'Circle',
+        title: json2PlotData.title,
+        dimensions,
+        measures,
+        rows: dataRows,
+      };
+
       return chartData;
     } catch (e) {
       console.error('提取图表数据失败:', e);
@@ -802,12 +1153,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         }
       } else if (skillName === 'json2plot') {
         // json2plot 工具
-        const chartData = this.extractChartDataFromArgs(item.skill_info?.args);
+        const chartData = this.extractChartDataFromArgs(item.skill_info?.args, item.answer);
         if (chartData) {
-          // 将图表数据作为 JSON 显示（可以后续扩展为图表组件）
+          // 将图表数据添加到消息内容中
           message.content.push({
-            type: BlockType.TEXT,
-            content: `图表数据: ${JSON.stringify(chartData, null, 2)}`,
+            type: BlockType.JSON2PLOT,
+            content: chartData,
           });
         }
       } else if (skillName === 'execute_code') {
