@@ -196,7 +196,7 @@ components:
       
     ToolAnswer:
       type: object
-      description: 当 stage 为 “skill” 时表示调用技能的输入输出
+      description: 当 stage 为 "skill" 时表示调用技能的输入输出
       properties:
         choices: array
         description: 调用工具。返回多个表示调用了多次工具
@@ -231,6 +231,110 @@ components:
       description: 调用工具的输出结果
       oneOf:
       - "#/components/schemas/SearchResult"
+    
+    TokenUsage:
+      type: object
+      description: Token使用情况
+      properties:
+        prompt_tokens:
+          type: integer
+          description: 提示tokens数
+        completion_tokens:
+          type: integer
+          description: 完成tokens数
+        total_tokens:
+          type: integer
+          description: 总tokens数
+        prompt_tokens_details:
+          type: object
+          description: 提示tokens详情
+          properties:
+            cached_tokens:
+              type: integer
+              description: 缓存的tokens数
+            uncached_tokens:
+              type: integer
+              description: 未缓存的tokens数
+    
+    Json2PlotAnswer:
+      type: object
+      description: json2plot工具的返回结果
+      properties:
+        result:
+          $ref: "#/components/schemas/Json2PlotResult"
+        full_result:
+          $ref: "#/components/schemas/Json2PlotFullResult"
+    
+    Json2PlotResult:
+      type: object
+      description: json2plot工具的结果数据
+      properties:
+        data_sample:
+          type: array
+          description: 数据样本
+          items:
+            type: object
+            additionalProperties: true
+        chart_config:
+          $ref: "#/components/schemas/ChartConfig"
+        title:
+          type: string
+          description: 图表标题
+        text:
+          type: string
+          description: 图表说明文本
+        result_cache_key:
+          type: string
+          description: 结果缓存key
+    
+    Json2PlotFullResult:
+      type: object
+      description: json2plot工具的完整结果数据
+      properties:
+        chart_config:
+          $ref: "#/components/schemas/ChartConfig"
+        title:
+          type: string
+          description: 图表标题
+        text:
+          type: string
+          description: 图表说明文本
+        result_cache_key:
+          type: string
+          description: 结果缓存key
+        data:
+          type: array
+          description: 完整数据
+          items:
+            type: object
+            additionalProperties: true
+    
+    ChartConfig:
+      type: object
+      description: 图表配置
+      properties:
+        xField:
+          type: string
+          description: X轴字段
+        yField:
+          type: string
+          description: Y轴字段
+        seriesField:
+          type: string
+          description: 系列字段
+        chart_type:
+          type: string
+          description: 图表类型
+          enum: [Column, Line, Pie, Circle]
+        groupField:
+          type: string
+          description: 分组字段
+        isStack:
+          type: boolean
+          description: 是否堆叠
+        isGroup:
+          type: boolean
+          description: 是否分组
     
     SearchIntent:
       type: object

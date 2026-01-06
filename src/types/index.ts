@@ -34,7 +34,9 @@ export enum BlockType {
   /** Web 搜索类型 */
   WEB_SEARCH = 'WebSearch',
   /** 工具调用类型 */
-  TOOL = 'Tool'
+  TOOL = 'Tool',
+  /** JSON2Plot 图表类型 */
+  JSON2PLOT = 'Json2Plot'
 }
 
 /**
@@ -87,6 +89,11 @@ export interface WebSearchBlock extends ContentBlock<BlockType.WEB_SEARCH, WebSe
 export interface ToolBlock extends ContentBlock<BlockType.TOOL, ToolCallData> {}
 
 /**
+ * JSON2Plot 图表类型的消息块
+ */
+export interface Json2PlotBlock extends ContentBlock<BlockType.JSON2PLOT, ChartDataSchema> {}
+
+/**
  * 消息接口
  * 展示在消息区消息列表中的一条消息
  */
@@ -101,7 +108,8 @@ export interface ChatMessage {
   type?: ChatMessageType;
 
   /** 该条消息的内容。一条消息可以由许多不同类型的消息块组成 */
-  content: Array<TextBlock | MarkdownBlock | WebSearchBlock | ToolBlock>;
+  content: Array<TextBlock | MarkdownBlock | WebSearchBlock | ToolBlock | Json2PlotBlock>;
+ 
 
   /** 与该消息关联的应用上下文（可选），仅用户消息可能包含此字段 */
   applicationContext?: ApplicationContext;
@@ -319,4 +327,57 @@ export interface ChatKitInterface {
    * @returns 返回 Promise，成功时 resolve，失败时 reject
    */
   deleteConversation(conversationID: string): Promise<void>;
+}
+
+/**
+ * 图表类型枚举
+ * 支持的图表类型
+ */
+export type ChartType = 'Line' | 'Column' | 'Pie' | 'Circle';
+
+/**
+ * 数据行
+ */
+export type DataRow = Record<string, any>;
+
+/**
+ * 维度接口
+ */
+export interface Dimension {
+  /** 字段名 */
+  name: string;
+  /** 显示名称 */
+  displayName: string;
+  /** 数据类型 */
+  dataType: 'string' | 'number' | 'date' | 'boolean';
+}
+
+/**
+ * 度量接口
+ */
+export interface Measure {
+  /** 字段名 */
+  name: string;
+  /** 显示名称 */
+  displayName: string;
+  /** 数据类型 */
+  dataType: 'number' | 'string';
+  /** 聚合方式 */
+  aggregation?: 'sum' | 'avg' | 'count' | 'max' | 'min';
+}
+
+/**
+ * 图表数据 Schema
+ */
+export interface ChartDataSchema {
+  /** 图表类型 */
+  chartType: ChartType;
+  /** 图表名称/标题（可选） */
+  title?: string;
+  /** 维度列表 */
+  dimensions: Dimension[];
+  /** 度量列表 */
+  measures: Measure[];
+  /** 数据行列表 */
+  rows: DataRow[];
 }

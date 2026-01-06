@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock } from '../../types';
+import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock } from '../../types';
 
 /**
  * ChatKitBase 组件的属性接口
@@ -327,6 +327,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param query Web 搜索的执行详情
    */
   protected appendWebSearchBlock(messageId: string, query: WebSearchQuery): void {
+    console.log('appendWebSearchBlock', query);
     this.setState((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
@@ -370,6 +371,34 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
                 output: result.output,
               },
             } as ToolBlock,
+          ];
+
+          return { ...msg, content: newContent };
+        }
+        return msg;
+      });
+
+      return { messages: newMessages };
+    });
+  }
+
+   /**
+   * 添加 JSON2Plot 图表类型的消息块
+   * 该方法由子类调用，用于在消息中添加 JSON2Plot 图表数据
+   * @param messageId 消息 ID
+   * @param chartData 图表数据 Schema
+   */
+   protected appendJson2PlotBlock(messageId: string, chartData: ChartDataSchema): void {
+    this.setState((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId === messageId) {
+          // 添加 JSON2Plot 块
+          const newContent = [
+            ...msg.content,
+            {
+              type: BlockType.JSON2PLOT,
+              content: chartData,
+            } as Json2PlotBlock,
           ];
 
           return { ...msg, content: newContent };
