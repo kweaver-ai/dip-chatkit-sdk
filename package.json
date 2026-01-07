@@ -1,6 +1,6 @@
 {
   "name": "@dip/chatkit",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "description": "AI 对话组件 - ChatKit",
   "main": "dist/chatkit.cjs.js",
