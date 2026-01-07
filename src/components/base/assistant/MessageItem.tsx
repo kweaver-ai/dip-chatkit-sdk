@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChatMessage, RoleType, BlockType } from '../../../types';
 import { TextBlock, MarkdownBlock, WebSearchBlock, Json2PlotBlock, ToolBlock } from './blocks';
+import { AssistantIcon } from '../../icons';
 
 /**
  * MessageItem 组件的属性接口
@@ -60,7 +61,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       {/* AI 头像 (仅助手消息) */}
       {!isUser && (
         <div className="w-[21px] h-[21px] mr-2 flex-shrink-0 mt-1">
-          <img src="/icons/assistant.svg" alt="AI Assistant" className="w-[21px] h-[21px]" />
+          <AssistantIcon className="w-[21px] h-[21px]" />
         </div>
       )}
 

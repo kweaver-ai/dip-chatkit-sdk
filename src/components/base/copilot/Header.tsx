@@ -1,4 +1,5 @@
 import React from 'react';
+import { AssistantIcon } from '../../icons';
 
 /**
  * Header 组件的属性接口
@@ -38,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="absolute left-0 top-0 flex items-center h-8">
           {/* AI 助手图标 */}
           <div className="w-8 h-8">
-            <img src="/icons/assistant.svg" alt="Copilot" className="w-8 h-8" />
+            <AssistantIcon className="w-8 h-8" />
           </div>
           {/* 标题 */}
           <div className="absolute left-[40px] top-1/2 -translate-y-1/2">
