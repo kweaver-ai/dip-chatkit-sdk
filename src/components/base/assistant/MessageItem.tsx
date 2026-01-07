@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChatMessage, RoleType, BlockType } from '../../../types';
-import { TextBlock, MarkdownBlock, WebSearchBlock, Json2PlotBlock } from './blocks';
+import { TextBlock, MarkdownBlock, WebSearchBlock, Json2PlotBlock, ToolBlock } from './blocks';
 
 /**
  * MessageItem 组件的属性接口
@@ -37,6 +37,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                 return <WebSearchBlock key={index} block={block} />;
               case BlockType.JSON2PLOT:
                 return <Json2PlotBlock key={index} block={block} />;
+              case BlockType.TOOL:
+                  return <ToolBlock key={index} block={block} />;
               default:
                 return null;
             }

@@ -1,5 +1,6 @@
 import { Component } from 'react';
-import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock } from '../../types';
+import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock } from '../../types';
+import { Text2SqlIcon } from '../icons';
 
 /**
  * ChatKitBase 组件的属性接口
@@ -366,9 +367,46 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
               type: BlockType.TOOL,
               content: {
                 name: 'execute_code',
+                icon: <Text2SqlIcon />,
                 title: '代码执行',
                 input: result.input,
                 output: result.output,
+              },
+            } as ToolBlock,
+          ];
+
+          return { ...msg, content: newContent };
+        }
+        return msg;
+      });
+
+      return { messages: newMessages };
+    });
+  }
+
+  /**
+   * 添加 Text2SQL 工具类型的消息块
+   * 该方法由子类调用，用于在消息中添加 Text2SQL 查询结果
+   * @param messageId 消息 ID
+   * @param result Text2SQL 的输入和输出结果
+   */
+  protected appendText2SqlBlock(messageId: string, result: Text2SqlResult): void {
+    this.setState((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId === messageId) {
+          // 添加 Text2SQL 工具块
+          const newContent = [
+            ...msg.content,
+            {
+              type: BlockType.TOOL,
+              content: {
+                name: 'text2sql',
+                title: result.title,
+                icon: <Text2SqlIcon />,
+                input: result.sql,
+                output: {
+                  data:result.data
+                },
               },
             } as ToolBlock,
           ];

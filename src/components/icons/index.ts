@@ -9,3 +9,5 @@ export { PieIcon } from './PieIcon';
 export { LineIcon } from './LineIcon';
 export { ColumnIcon } from './ColumnIcon';
 export { TableIcon } from './TableIcon';
+export { JsonPlotIcon } from './JsonPlotIcon';
+export { Text2SqlIcon } from './Text2SqlIcon';

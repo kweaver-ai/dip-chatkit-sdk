@@ -533,6 +533,14 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
                 (this as any).appendJson2PlotBlock(messageId, chartData);
               }
             }
+            // 检查是否是 Text2SQL 工具
+            if (content?.skill_info?.name === 'text2sql') {
+              console.log('text2sql content', content);
+              const text2SqlResult = this.extractText2SqlResult(content.skill_info?.args, content.answer);
+              if (text2SqlResult) {
+                (this as any).appendText2SqlBlock(messageId, text2SqlResult);
+              }
+            }
           } else if (content?.stage === 'llm') {
             // LLM 阶段，输出 answer
             const answer = content.answer || '';
@@ -853,6 +861,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       if (executeCodeResult) {
         (this as any).appendExecuteCodeBlock(messageId, executeCodeResult);
       }
+    } else if (skillName === 'text2sql') {
+      // Text2SQL 工具：解析查询输入、SQL 语句和执行结果
+      const text2SqlResult = this.extractText2SqlResult(skillInfo.args, answer);
+      if (text2SqlResult) {
+        (this as any).appendText2SqlBlock(messageId, text2SqlResult);
+      }
     } else {
       // 其他技能：输出技能名称
       (this as any).appendMarkdownBlock(messageId, `调用工具: ${skillName}`);
@@ -1129,6 +1143,83 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
   }
 
   /**
+   * 从 skill_info.args 和 answer 中提取 Text2SQL 结果
+   * 用于处理 text2sql 工具的输入和输出
+   * 根据 OpenAPI 规范，Text2SqlResult 包含 result 和 full_result
+   * - result: Text2SqlResultData（包含 data_desc，但可能只有数据样本）
+   * - full_result: Text2SqlFullResultData（包含完整数据，但没有 data_desc）
+   * 优先使用 full_result，如果没有则使用 result
+   * @param args skill_info.args 数组，包含查询文本
+   * @param answer 技能执行的 answer 字段，包含 SQL 执行结果
+   * @returns Text2SqlResult 对象，包含 input、sql、data 等信息
+   */
+  public extractText2SqlResult(
+    args: Array<{name?: string; type?: string; value?: string}> | undefined,
+    answer: any
+  ): { input: string; sql: string; data?: Array<Record<string, any>>; cites?: Array<{id: string; name: string; type: string; description?: string}>; title?: string; message?: string; dataDesc?: {return_records_num?: number; real_records_num?: number}; explanation?: any} | null {
+    try {
+      // 从 args 中提取查询输入
+      let queryInput = '';
+      if (args && Array.isArray(args)) {
+        // 查找 name 为 'input' 的参数
+        const inputArg = args.find(arg => arg.name === 'input');
+        queryInput = inputArg?.value || '';
+      }
+
+      // 优先使用 full_result，如果没有则使用 result
+      // 根据 schema: Text2SqlResult { result: Text2SqlResultData, full_result: Text2SqlFullResultData }
+      const fullResult = answer?.full_result;
+      const result = answer?.result;
+      
+      // 如果两者都不存在，返回 null
+      if (!fullResult && !result) {
+        return null;
+      }
+
+      // 优先使用 full_result，如果没有则使用 result
+      const text2SqlData = fullResult || result;
+
+      // 从数据中提取字段
+      const sql = text2SqlData?.sql || '';
+      const data = text2SqlData?.data || [];
+      const cites = text2SqlData?.cites || [];
+      const title = text2SqlData?.title || '';
+      const message = text2SqlData?.message || '';
+      const explanation = text2SqlData?.explanation;
+      
+      // data_desc 只在 result 中存在，不在 full_result 中
+      const dataDesc = result?.data_desc;
+
+      // 如果没有输入查询，返回 null
+      if (!queryInput) {
+        return null;
+      }
+
+      return {
+        input: queryInput,
+        sql,
+        data: Array.isArray(data) ? data : [],
+        cites: Array.isArray(cites) ? cites.map((cite: any) => ({
+          id: cite.id || '',
+          name: cite.name || '',
+          type: cite.type || '',
+          description: cite.description,
+        })) : [],
+        title,
+        message,
+        dataDesc: dataDesc ? {
+          return_records_num: dataDesc.return_records_num,
+          real_records_num: dataDesc.real_records_num,
+        } : undefined,
+        explanation,
+      };
+    } catch (e) {
+      console.error('提取 Text2SQL 结果失败:', e);
+      return null;
+    }
+  }
+
+  /**
    * 将技能调用或 LLM 回答的内容追加到消息中
    * 用于历史消息解析，根据 stage 和 skill_info 将内容添加到 ChatMessage.content 数组
    * @param item Progress 或 OtherTypeAnswer 对象
@@ -1172,6 +1263,28 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
               title: '代码执行',
               input: executeCodeResult.input,
               output: executeCodeResult.output,
+            },
+          });
+        }
+      } else if (skillName === 'text2sql') {
+        // Text2SQL 工具
+        const text2SqlResult = this.extractText2SqlResult(item.skill_info?.args, item.answer);
+        if (text2SqlResult) {
+          message.content.push({
+            type: BlockType.TOOL,
+            content: {
+              name: 'text2sql',
+              title: 'Text2SQL',
+              input: text2SqlResult.input,
+              output: {
+                sql: text2SqlResult.sql,
+                data: text2SqlResult.data,
+                cites: text2SqlResult.cites,
+                title: text2SqlResult.title,
+                message: text2SqlResult.message,
+                dataDesc: text2SqlResult.dataDesc,
+                explanation: text2SqlResult.explanation,
+              },
             },
           });
         }

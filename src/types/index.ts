@@ -36,7 +36,9 @@ export enum BlockType {
   /** 工具调用类型 */
   TOOL = 'Tool',
   /** JSON2Plot 图表类型 */
-  JSON2PLOT = 'Json2Plot'
+  JSON2PLOT = 'Json2Plot',
+  /** Text2SQL 类型 */
+  Text2Sql = 'Text2Sql'
 }
 
 /**
@@ -186,6 +188,23 @@ export interface ExecuteCodeResult {
   input: string;
   /** 代码执行后转为自然语言的输出结果，以 Markdown 格式显示 */
   output: string;
+}
+
+/**
+ * Text2SQL 结果接口
+ * Text2SQL 工具的输入和输出信息
+ * 根据 OpenAPI 规范，answer 包含 result 和 full_result
+ * - result: Text2SqlResultData（包含 data_desc，但可能只有数据样本）
+ * - full_result: Text2SqlFullResultData（包含完整数据，但没有 data_desc）
+ */
+export interface Text2SqlResult {
+  /** 输入的查询文本 */
+  title: string;
+  // 查询结果数据
+  data: Array<Record<string, any>>;
+
+  // 生成的 SQL 语句
+  sql: string;
 }
 
 /**
