@@ -180,6 +180,7 @@ components:
           oneOf:
           - $ref: "#/components/schemas/LLMAnswer"
           - $ref: "#/components/schemas/ToolAnswer"
+          - $ref: "#/components/schemas/Text2SqlResult"
         think:
           type: string
           description: 执行步骤中的思考过程
@@ -189,6 +190,40 @@ components:
           enum: [processing, completed]
         skill_info:
           $ref: "#/components/schemas/SkillInfo"
+        input_message:
+          type: string
+          description: 输入消息
+        estimated_output_tokens:
+          type: integer
+          description: 预估输出 tokens 数
+        id:
+          type: string
+          description: 步骤 ID
+        agent_name:
+          type: string
+          description: 智能体名称
+        start_time:
+          type: number
+          format: float
+          description: 开始时间戳
+        end_time:
+          type: number
+          format: float
+          description: 结束时间戳
+        estimated_input_tokens:
+          type: integer
+          description: 预估输入 tokens 数
+        estimated_ratio_tokens:
+          type: integer
+          description: 预估比例 tokens 数
+        token_usage:
+          $ref: "#/components/schemas/TokenUsage"
+        interrupted:
+          type: boolean
+          description: 是否中断
+        flags:
+          type: string
+          description: 标志位
   
     LLMAnswer:
       type: string
@@ -198,9 +233,10 @@ components:
       type: object
       description: 当 stage 为 "skill" 时表示调用技能的输入输出
       properties:
-        choices: array
-        description: 调用工具。返回多个表示调用了多次工具
-        items:
+        choices:
+          type: array
+          description: 调用工具。返回多个表示调用了多次工具
+          items:
           type: object
           properties:
             message:
@@ -225,12 +261,14 @@ components:
       description: 调用工具的输入
       oneOf:
       - "#/components/schemas/SearchIntent"
+      - $ref: "#/components/schemas/Text2SqlIntent"
     
     ToolResult:
       type: object
       description: 调用工具的输出结果
       oneOf:
       - "#/components/schemas/SearchResult"
+      - $ref: "#/components/schemas/Text2SqlResult"
     
     TokenUsage:
       type: object
@@ -406,6 +444,127 @@ components:
                 stdout:
                   type: string
                   description: 代码执行后转为自然语言的输出结果
+    
+    Text2SqlIntent:
+      type: object
+      description: text2sql工具的输入查询
+      properties:
+        action:
+          type: string
+          description: 操作类型
+          enum: [gen_exec]
+        input:
+          type: string
+          description: 输入查询文本
+    
+    Text2SqlResult:
+      type: object
+      description: text2sql工具的返回结果
+      properties:
+        result:
+          $ref: "#/components/schemas/Text2SqlResultData"
+        full_result:
+          $ref: "#/components/schemas/Text2SqlFullResultData"
+    
+    Text2SqlResultData:
+      type: object
+      description: text2sql工具的结果数据
+      properties:
+        cites:
+          type: array
+          description: 数据源引用列表
+          items:
+            $ref: "#/components/schemas/DataCite"
+        result_cache_key:
+          type: string
+          description: 结果缓存key
+        data_desc:
+          type: object
+          description: 数据描述信息
+          properties:
+            return_records_num:
+              type: integer
+              description: 返回记录数
+            real_records_num:
+              type: integer
+              description: 实际记录数
+        data:
+          type: array
+          description: 数据样本
+          items:
+            type: object
+            additionalProperties: true
+        sql:
+          type: string
+          description: 执行的SQL语句
+        explanation:
+          type: object
+          description: 解释信息
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+        title:
+          type: string
+          description: 结果标题
+        message:
+          type: string
+          description: 结果消息
+    
+    Text2SqlFullResultData:
+      type: object
+      description: text2sql工具的完整结果数据
+      properties:
+        data:
+          type: array
+          description: 完整数据
+          items:
+            type: object
+            additionalProperties: true
+        result_cache_key:
+          type: string
+          description: 结果缓存key
+        sql:
+          type: string
+          description: 执行的SQL语句
+        explanation:
+          type: object
+          description: 解释信息
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+        title:
+          type: string
+          description: 结果标题
+        message:
+          type: string
+          description: 结果消息
+        cites:
+          type: array
+          description: 数据源引用列表
+          items:
+            $ref: "#/components/schemas/DataCite"
+    
+    DataCite:
+      type: object
+      description: 数据源引用信息
+      properties:
+        id:
+          type: string
+          description: 数据源ID
+        name:
+          type: string
+          description: 数据源名称
+        type:
+          type: string
+          description: 数据源类型
+          enum: [data_view]
+        description:
+          type: string
+          description: 数据源描述
 
     SkillInfo:
       type: object

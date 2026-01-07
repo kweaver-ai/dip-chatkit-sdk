@@ -108,6 +108,13 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
   };
 
   /**
+   * 判断是否为 Text2SQL 工具
+   */
+  const isText2SqlTool = (): boolean => {
+    return toolName === 'text2sql';
+  };
+
+  /**
    * 渲染代码输入（Markdown 代码块格式）
    */
   const renderCodeInput = (code: string): React.ReactNode => {
@@ -131,6 +138,126 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {output}
         </ReactMarkdown>
+      </div>
+    );
+  };
+
+  /**
+   * 渲染 SQL 输入（Markdown 代码块格式）
+   */
+  const renderSqlInput = (query: string): React.ReactNode => {
+    return (
+      <div className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+        {query}
+      </div>
+    );
+  };
+
+  /**
+   * 渲染 SQL 输出（包括 SQL 语句、数据表格等）
+   */
+  const renderSqlOutput = (output: any): React.ReactNode => {
+    if (!output || typeof output !== 'object') {
+      return <div className="text-sm text-gray-500">暂无数据</div>;
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* 标题和消息 */}
+        {output.title && (
+          <div className="text-base font-semibold text-gray-900">{output.title}</div>
+        )}
+        {output.message && (
+          <div className="text-sm text-gray-700">{output.message}</div>
+        )}
+
+        {/* SQL 语句 */}
+        {output.sql && (
+          <div>
+            <h4 className="text-sm font-bold text-gray-900 mb-2">SQL 语句</h4>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto">
+              <pre className="text-sm text-gray-700 font-mono whitespace-pre-wrap break-words">
+                {output.sql}
+              </pre>
+            </div>
+          </div>
+        )}
+
+        {/* 数据源引用 */}
+        {output.cites && Array.isArray(output.cites) && output.cites.length > 0 && (
+          <div>
+            <h4 className="text-sm font-bold text-gray-900 mb-2">数据源</h4>
+            <div className="space-y-2">
+              {output.cites.map((cite: any, index: number) => (
+                <div key={index} className="text-sm text-gray-600">
+                  <span className="font-medium">{cite.name || cite.id}</span>
+                  {cite.description && <span className="ml-2 text-gray-500">({cite.description})</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 数据描述 */}
+        {output.dataDesc && (
+          <div className="text-sm text-gray-600">
+            {output.dataDesc.return_records_num !== undefined && (
+              <span>返回记录数: {output.dataDesc.return_records_num}</span>
+            )}
+            {output.dataDesc.real_records_num !== undefined && (
+              <span className="ml-4">实际记录数: {output.dataDesc.real_records_num}</span>
+            )}
+          </div>
+        )}
+
+        {/* 数据表格 */}
+        {output.data && Array.isArray(output.data) && output.data.length > 0 && (
+          <div>
+            <h4 className="text-sm font-bold text-gray-900 mb-2">查询结果</h4>
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {Object.keys(output.data[0]).map((key) => (
+                      <th
+                        key={key}
+                        className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        {key}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {output.data.map((row: any, rowIndex: number) => (
+                    <tr key={rowIndex}>
+                      {Object.keys(output.data[0]).map((key) => (
+                        <td
+                          key={key}
+                          className="px-4 py-2 text-sm text-gray-700 whitespace-nowrap"
+                        >
+                          {row[key] !== null && row[key] !== undefined ? String(row[key]) : '-'}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 解释信息 */}
+        {output.explanation && (
+          <div>
+            <h4 className="text-sm font-bold text-gray-900 mb-2">解释信息</h4>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words font-mono">
+                {JSON.stringify(output.explanation, null, 2)}
+              </pre>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -198,6 +325,28 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
                   <h3 className="text-sm font-bold text-gray-900 mb-3">输出</h3>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto">
                     {renderCodeOutput(typeof output === 'string' ? output : formatData(output))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : isText2SqlTool() ? (
+            <>
+              {/* 输入查询 */}
+              {input !== undefined && input !== null && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-bold text-gray-900 mb-3">查询输入</h3>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto">
+                    {renderSqlInput(typeof input === 'string' ? input : formatData(input))}
+                  </div>
+                </div>
+              )}
+
+              {/* 输出结果 */}
+              {output !== undefined && output !== null && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 mb-3">查询结果</h3>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto">
+                    {renderSqlOutput(output)}
                   </div>
                 </div>
               )}

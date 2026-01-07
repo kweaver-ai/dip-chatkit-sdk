@@ -10,17 +10,19 @@
 
 ### 2.1 组件拆分
 
-为了代码的可维护性和复用性，将 Json2PlotBlock 拆分为以下4个组件：
+为了代码的可维护性和复用性，将 Json2PlotBlock 拆分为以下5个组件：
 
 1. **EChartsView**: 纯图表渲染组件，负责使用 ECharts 渲染图表
 2. **TableView**: 表格渲染组件，负责渲染数据表格
-3. **Json2PlotBlock**: 主组件，包含标题栏和菜单栏，整合 EChartsView 和 TableView
-4. **Json2PlotModal**: 弹窗组件，包含菜单栏和内容区域，整合 EChartsView 和 TableView
+3. **Json2PlotContentView**: 内容视图组件，包含标题栏和内容区域，整合 EChartsView 和 TableView
+4. **Json2PlotBlock**: 主组件，整合 ToolBlock 和 Json2PlotContentView，处理弹窗逻辑
+5. **Json2PlotModal**: 弹窗组件，包含菜单栏和内容区域，整合 EChartsView 和 TableView
 
 ### 2.2 文件列表
 
 - `src/components/base/assistant/blocks/Json2PlotBlock/EChartsView.tsx` - 图表渲染组件
 - `src/components/base/assistant/blocks/Json2PlotBlock/TableView.tsx` - 表格渲染组件
+- `src/components/base/assistant/blocks/Json2PlotBlock/Json2PlotContentView.tsx` - 内容视图组件
 - `src/components/base/assistant/blocks/Json2PlotBlock/Json2PlotModal.tsx` - 弹窗组件
 - `src/components/base/assistant/blocks/Json2PlotBlock.tsx` - 主组件
 - `src/components/base/assistant/blocks/Json2PlotBlock/index.ts` - 导出文件
@@ -107,7 +109,22 @@ export interface Json2PlotBlockProps {
 }
 ```
 
-#### 4.1.4 Json2PlotModal Props
+#### 4.1.4 Json2PlotContentView Props
+
+```typescript
+export interface Json2PlotContentViewProps {
+  /** 图表数据 Schema */
+  data: ChartDataSchema;
+  /** 图表宽度 */
+  width?: string | number;
+  /** 图表高度 */
+  height?: string | number;
+  /** 点击图表回调（用于打开弹窗） */
+  onChartClick?: () => void;
+}
+```
+
+#### 4.1.5 Json2PlotModal Props
 
 ```typescript
 export interface Json2PlotModalProps {
@@ -117,8 +134,8 @@ export interface Json2PlotModalProps {
   onClose: () => void;
   /** 图表数据 Schema */
   data: ChartDataSchema;
-  /** 初始图表类型 */
-  initialChartType?: ChartType;
+  /** 初始视图类型：'table' 或图表类型 */
+  initialViewType?: 'table' | ChartType;
 }
 ```
 
@@ -508,15 +525,22 @@ npm install echarts@^6.0.0
 - 处理数字格式化
 - 支持滚动和最大高度限制
 
-### 8.3 Json2PlotBlock 组件职责
+### 8.3 Json2PlotContentView 组件职责
 
-- 主组件，整合 EChartsView 和 TableView
+- 内容视图组件，整合 EChartsView 和 TableView
 - 管理标题栏和菜单栏
 - 管理视图切换状态（表格/图表）
 - 管理图表类型切换状态
-- 处理弹窗打开逻辑
+- 支持可选的点击事件处理（用于打开弹窗）
 
-### 8.4 Json2PlotModal 组件职责
+### 8.4 Json2PlotBlock 组件职责
+
+- 主组件，整合 ToolBlock 和 Json2PlotContentView
+- 处理数据为空状态
+- 管理弹窗的打开和关闭
+- 将弹窗打开逻辑传递给 Json2PlotContentView
+
+### 8.5 Json2PlotModal 组件职责
 
 - 弹窗组件，整合 EChartsView 和 TableView
 - 管理弹窗的打开和关闭
@@ -525,7 +549,9 @@ npm install echarts@^6.0.0
 
 ## 9. 编写建议
 
-1. **代码复用**：EChartsView 和 TableView 在 Json2PlotBlock 和 Json2PlotModal 中复用
+1. **代码复用**：
+   - EChartsView 和 TableView 在 Json2PlotContentView 和 Json2PlotModal 中复用
+   - Json2PlotContentView 可在 Json2PlotBlock 和 ToolDrawer 中复用
 2. **数据精确度**：注意数据精确度的显示，避免显示过多小数位
 3. **类型安全**：充分利用 TypeScript 类型系统，确保类型安全
 4. **错误处理**：所有可能出错的地方都要有错误处理，避免静默失败
@@ -536,3 +562,6 @@ npm install echarts@^6.0.0
 6. **性能考虑**：大数据量时考虑虚拟滚动或数据采样
 7. **可维护性**：代码注释清晰，关键逻辑添加说明
 8. **组件解耦**：各组件职责单一，便于测试和维护
+9. **组件使用**：
+   - Json2PlotContentView 用于在 ToolDrawer 中渲染 json2plot 工具的输出
+   - Json2PlotBlock 用于在聊天消息中渲染 Json2Plot 类型的消息块
