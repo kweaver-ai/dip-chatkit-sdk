@@ -175,9 +175,10 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * 该方法需要由开发者实现，以适配扣子、Dify 等 LLMOps 平台的接口
    * 成功返回会话 ID
    * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
+   * @param title 会话标题，通常是用户发送的第一条消息内容
    * @returns 返回新创建的会话 ID
    */
-  public abstract generateConversation(): Promise<string>;
+  public abstract generateConversation(title?: string): Promise<string>;
 
   /**
    * 向后端发送消息 (抽象方法，由子类实现)
@@ -460,19 +461,14 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
       // 先清除现有会话
       this.clearConversation();
 
-      // 调用子类实现的 generateConversation 方法创建新会话
-      const newConversationID = await this.generateConversation();
-
       // 调用子类实现的 getOnboardingInfo 方法获取开场白信息
       const onboardingInfo = await this.getOnboardingInfo();
 
       // 更新会话 ID 和开场白信息
       this.setState({
-        conversationID: newConversationID,
         onboardingInfo: onboardingInfo,
       });
 
-      console.log('新会话已创建, conversationID:', newConversationID);
       console.log('开场白信息已加载:', onboardingInfo);
     } catch (error) {
       console.error('创建新会话失败:', error);
@@ -543,7 +539,8 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     // 如果没有会话 ID，则创建新会话
     if (!currentConversationID) {
       try {
-        currentConversationID = await this.generateConversation();
+        // 使用发送的内容作为会话标题
+        currentConversationID = await this.generateConversation(text);
         this.setState({ conversationID: currentConversationID });
         console.log('自动创建新会话, conversationID:', currentConversationID);
       } catch (error) {

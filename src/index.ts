@@ -13,6 +13,7 @@ export type { ChatKitBaseProps, ChatKitBaseState } from './components/base/ChatK
 
 export { CopilotBase } from './components/base/copilot/CopilotBase';
 export { AssistantBase } from './components/base/assistant/AssistantBase';
+export type { AssistantBaseProps, AssistantBaseState } from './components/base/assistant/AssistantBase';
 
 // ============ DIP (AISHU DIP 平台) ============
 export { DIPBaseMixin } from './components/dip/DIPBase';

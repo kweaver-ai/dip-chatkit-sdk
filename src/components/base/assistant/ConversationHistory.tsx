@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ConversationHistory as ConversationHistoryType } from '@dip/chatkit';
+import { ConversationHistory as ConversationHistoryType, DateRange } from '../../../types';
 
 /**
  * 历史会话列表组件的属性接口
@@ -15,6 +15,8 @@ interface ConversationHistoryProps {
   onLoadConversation: (conversationId: string) => void;
   /** 删除指定会话的回调函数 */
   onDeleteConversation: (conversationId: string) => Promise<void>;
+  /** Agent Name (agent 名称) */
+  agentName?: string;
 }
 
 /**
@@ -28,6 +30,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   onGetConversations,
   onLoadConversation,
   onDeleteConversation,
+  agentName,
 }) => {
   const [conversations, setConversations] = useState<ConversationHistoryType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,7 +44,6 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const loadConversations = async () => {
     setLoading(true);
     setError(null);
-    console.log('loadConversations');
     try {
       const data = await onGetConversations();
       setConversations(data);
@@ -76,15 +78,57 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     }
   };
 
+  
+  const DateRangeValue: {
+    [key in DateRange]: number
+  } = {
+    [DateRange.Minute]: 1000 * 60,
+    [DateRange.Hour]: 1000 * 60 * 60,
+    [DateRange.ToDay]: 1000 * 60 * 60 * 24,
+    [DateRange.Yesterday]: 1000 * 60 * 60 * 24 * 2,
+    [DateRange.SixDay]: 1000 * 60 * 60 * 24 * 6,
+    [DateRange.Month]: 1000 * 60 * 60 * 24 * 30,
+    [DateRange.Year]: 1000 * 60 * 60 * 24 * 30 * 12,
+  }
+
   /**
-   * 格式化时间戳为可读的时间字符串（只显示时分）
+   * 获取时间戳的零时时间
    */
-  const formatTime = (timestamp: number): string => {
-    const date = new Date(timestamp);
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-  };
+  const getTimesZeroTime = (time: number = Date.now()): number => {
+    return new Date(time).setHours(0, 0, 0, 0)
+  }
+
+  /**
+   * 格式化时间戳为可读的时间字符串
+   */
+  const formatTime = (timestamp: number, range: Array<DateRange>) => {
+    const time = timestamp < 1000000000000 ? timestamp * 1000 : timestamp; // 如果时间戳是秒级（小于 13 位），需要转换为毫秒
+    // time零时的时间
+    const timeStartTime = getTimesZeroTime(time)
+    // 今天零时的时间
+    const toDayStartTime = getTimesZeroTime()
+    // 6天零时的时间
+    const sevenDayStartTime = getTimesZeroTime(
+        Date.now() - DateRangeValue.sixDay,
+    )
+    const relativelyTime = toDayStartTime - timeStartTime
+    const currentYear = new Date().getFullYear()
+    const timeYear = new Date(time).getFullYear()
+    switch (true) {
+        case range.includes(DateRange.ToDay) && toDayStartTime < time:
+            return new Date(time).getHours().toString().padStart(2, '0') + ':' + new Date(time).getMinutes().toString().padStart(2, '0')
+        case range.includes(DateRange.SixDay) && sevenDayStartTime < time:
+            return `${Math.floor(relativelyTime / (1000 * 60 * 60 * 24))}` + '天前'
+        case range.includes(DateRange.Year) && currentYear === timeYear:
+            return new Date(time).getMonth().toString().padStart(2, '0') + '-' + new Date(time).getDate().toString().padStart(2, '0')
+        default:
+            try {
+                return new Date(time).getFullYear().toString() + '-' + new Date(time).getMonth().toString().padStart(2, '0') + '-' + new Date(time).getDate().toString().padStart(2, '0')
+            } catch (ex) {
+                return '时间格式化错误'
+            }
+    }
+}
 
   // 当组件可见时加载历史会话
   useEffect(() => {
@@ -107,7 +151,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* 头部 */}
-        <div className="h-[64px] px-[24px] flex items-center justify-between border-b border-gray-100">
+        <div className="h-[64px] px-[24px] flex items-center justify-between">
           <h2
             className="text-[18px] font-medium text-black"
             style={{ fontFamily: 'Noto Sans SC' }}
@@ -116,7 +160,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           </h2>
           <button
             onClick={onClose}
-            className="w-[16px] h-[16px] text-[rgba(0,0,0,0.45)] hover:text-[rgba(0,0,0,0.85)] transition-colors"
+            className="w-[24px] h-[24px] flex items-center justify-center text-[rgba(0,0,0,0.45)] hover:text-[rgba(0,0,0,0.85)] transition-colors"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path
@@ -166,10 +210,10 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           )}
 
           {!loading && !error && conversations.length > 0 && (
-            <div className="px-[14px] py-[14px]">
-              {/* 会话分组标题 - 使用第一个会话的标题作为分组标题 */}
-              {conversations.length > 0 && (
-                <div className="mb-[14px] flex items-center gap-[8px]">
+            <div className="px-[14px] pb-[14px]">
+              {/* 展示 Agent Name */}
+              {agentName && (
+                <div className="mb-[14px] flex flex-col items-center gap-y-[10px]">
                   {/* Agent 图标 */}
                   <div className="w-[48px] h-[48px] bg-[#52c41a] rounded-full flex items-center justify-center">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -201,7 +245,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                     className="text-[16px] font-medium text-[rgba(0,0,0,0.85)]"
                     style={{ fontFamily: 'Noto Sans SC' }}
                   >
-                    招生分析
+                    {agentName}
                   </p>
                 </div>
               )}
@@ -277,7 +321,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                         className="text-[14px] text-[rgba(0,0,0,0.45)] flex-shrink-0"
                         style={{ fontFamily: 'Noto Sans SC', lineHeight: '36px' }}
                       >
-                        {formatTime(conversation.updated_at)}
+                        {formatTime(conversation.updated_at, [DateRange.ToDay, DateRange.SixDay, DateRange.Year])}
                       </p>
                     )}
                   </div>
@@ -292,3 +336,4 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
 };
 
 export default ConversationHistory;
+

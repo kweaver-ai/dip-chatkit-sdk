@@ -134,6 +134,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     /** Agent ID */
     public dipId: string;
 
+    /** Agent Key (agent 标识) */
+    public dipKey: string = '';
+
+    /** Agent Name (agent 名称) */
+    public dipName: string = '';
+
     /** agent 版本 */
     public dipVersion: string;
 
@@ -216,6 +222,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
           return await response.json();
         });
 
+        // 存储 agent key
+        if (result.key) {
+          this.dipKey = result.key;
+          this.dipName = result.name;
+        }
+
         // 从响应中提取开场白和预置问题
         const config = result.config || {};
         const openingRemarkConfig = config.opening_remark_config || {};
@@ -252,22 +264,22 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
      * 调用 DIP API 创建新的会话，返回会话 ID
      * API 端点: POST /app/{agent_id}/conversation
      * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
+     * @param title 会话标题，通常是用户发送的第一条消息内容
      * @returns 返回新创建的会话 ID
      */
-    public async generateConversation(): Promise<string> {
+    public async generateConversation(title?: string): Promise<string> {
       try {
-        console.log('正在创建 DIP 会话...');
+        console.log('正在创建 DIP 会话...', title ? `标题: ${title}` : '');
 
         // 构造创建会话的请求体
-        const requestBody = {
-          agent_id: this.dipId,
-          agent_version: 'latest',
+        const requestBody: any = {
+          title: title || '新会话',
         };
 
         // 使用 executeDataAgentWithTokenRefresh 包装 API 调用，支持 token 刷新和重试
         const result = await this.executeDataAgentWithTokenRefresh(async () => {
           const response = await fetch(
-            `${this.dipBaseUrl}/app/${this.dipId}/conversation`,
+            `${this.dipBaseUrl}/app/${this.dipKey}/conversation`,
             {
               method: 'POST',
               headers: {
@@ -334,7 +346,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       // 使用 executeDataAgentWithTokenRefresh 包装 API 调用
       const response = await this.executeDataAgentWithTokenRefresh(async () => {
         const res = await fetch(
-          `${this.dipBaseUrl}/app/${this.dipId}/chat/completion`,
+          `${this.dipBaseUrl}/app/${this.dipKey}/chat/completion`,
           {
             method: 'POST',
             headers: {
@@ -1405,7 +1417,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
      * @returns 返回 Promise，成功时 resolve，失败时 reject
      */
     public async terminateConversation(conversationId: string): Promise<void> {
-      const url = `${this.dipBaseUrl}/app/${this.dipId}/chat/termination`;
+      const url = `${this.dipBaseUrl}/app/${this.dipKey}/chat/termination`;
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -1503,7 +1515,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         console.log('正在获取历史会话列表...');
 
         // 构造 URL，包含分页参数
-        const url = `${this.dipBaseUrl}/app/${this.dipId}/conversation?page=${page}&size=${size}`;
+        const url = `${this.dipBaseUrl}/app/${this.dipKey}/conversation?page=${page}&size=${size}`;
 
         // 使用 executeDataAgentWithTokenRefresh 包装 API 调用，支持 token 刷新和重试
         const result = await this.executeDataAgentWithTokenRefresh(async () => {
@@ -1562,7 +1574,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         console.log('正在获取会话消息列表，conversationId:', conversationId);
 
         // 构造 URL
-        const url = `${this.dipBaseUrl}/app/${this.dipId}/conversation/${conversationId}`;
+        const url = `${this.dipBaseUrl}/app/${this.dipKey}/conversation/${conversationId}`;
 
         // 使用 executeDataAgentWithTokenRefresh 包装 API 调用，支持 token 刷新和重试
         const result = await this.executeDataAgentWithTokenRefresh(async () => {
@@ -1694,7 +1706,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         console.log('正在删除会话，conversationID:', conversationID);
 
         // 构造 URL
-        const url = `${this.dipBaseUrl}/app/${this.dipId}/conversation/${conversationID}`;
+        const url = `${this.dipBaseUrl}/app/${this.dipKey}/conversation/${conversationID}`;
 
         // 使用 executeDataAgentWithTokenRefresh 包装 API 调用，支持 token 刷新和重试
         await this.executeDataAgentWithTokenRefresh(async () => {

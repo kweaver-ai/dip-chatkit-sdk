@@ -262,9 +262,10 @@ export interface ChatKitInterface {
    * 该方法需要由子类继承并重写，以适配扣子、Dify 等 LLMOps 平台的接口
    * 成功返回会话 ID
    * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
+   * @param title 会话标题，通常是用户发送的第一条消息内容
    * @returns 返回新创建的会话 ID
    */
-  generateConversation(): Promise<string>;
+  generateConversation(title?: string): Promise<string>;
 
   /**
    * 向后端发送消息
@@ -399,4 +400,30 @@ export interface ChartDataSchema {
   measures: Measure[];
   /** 数据行列表 */
   rows: DataRow[];
+}
+
+/**
+ * 日期范围枚举
+ */
+export enum DateRange {
+  // 分钟
+  Minute = 'minute',
+
+  // 小时
+  Hour = 'hour',
+
+  // 今天
+  ToDay = 'toDay',
+
+  // 昨天
+  Yesterday = 'yesterday',
+
+  // 6天
+  SixDay = 'sixDay',
+
+  // 月
+  Month = 'month',
+
+  // 年
+  Year = 'year',
 }

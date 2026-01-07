@@ -57,7 +57,7 @@ const InputArea: React.FC<InputAreaProps> = ({
 
   return (
     <div className="w-full flex justify-center">
-      <div className="w-full max-w-[960px] px-5 pb-6">
+      <div className="w-full max-w-[960px] px-5 pb-3">
       {/* 上下文标签 */}
       {context && context.title && (
         <div className="mb-2 bg-[rgba(18,110,227,0.04)] rounded-lg px-4 py-2 flex items-center">
@@ -75,7 +75,13 @@ const InputArea: React.FC<InputAreaProps> = ({
       )}
 
       {/* 输入框容器 */}
-      <div className="relative bg-white border-[1.5px] border-solid border-[#3b9be0] rounded-[12px] overflow-hidden">
+      <div 
+        className="relative bg-white rounded-[12px] overflow-hidden" 
+        style={{ 
+            background: 'linear-gradient(#fff,#fff) padding-box, linear-gradient(45.59deg, #3B9BE0 -3.35%, #FFAA00 57.9%, rgba(50, 50, 50, 0.646918) 102.8%) border-box',
+            border: '1.5px solid transparent' 
+          }}
+      >
         {/* 输入框 */}
         <textarea
           value={value}
@@ -83,7 +89,7 @@ const InputArea: React.FC<InputAreaProps> = ({
           onKeyDown={handleKeyDown}
           placeholder="请输入要查找的内容"
           disabled={disabled}
-          className="w-full h-[56px] resize-none px-4 py-3 text-[14px] leading-[22px] text-black placeholder:text-[rgba(0,0,0,0.3)] focus:outline-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+          className="w-full h-[110px] resize-none px-4 py-3 text-[14px] leading-[22px] text-black placeholder:text-[rgba(0,0,0,0.3)] focus:outline-none disabled:bg-gray-50 disabled:cursor-not-allowed"
           style={{ fontFamily: 'Noto Sans SC' }}
           maxLength={4000}
         />
