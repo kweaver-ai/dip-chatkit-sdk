@@ -107,11 +107,11 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
 
     return (
       <>
-        <div className="flex h-full bg-white">
+        <div className="flex h-full w-full bg-white">
           {/* 主区域 - 对话界面 */}
           <div className="flex-1 flex flex-col">
             {/* 消息列表区域或欢迎界面 */}
-            <div className="flex-1 overflow-y-auto bg-gray-50">
+            <div className="flex-1 overflow-y-auto">
               {showPrologue ? (
                 isLoadingOnboarding ? (
                   // 加载中，显示加载提示

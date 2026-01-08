@@ -578,12 +578,13 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     }));
 
     try {
+      this.setState({ textInput: '' });
+      
       // 调用子类实现的 sendMessage 方法，传入 conversationID
       const assistantMessage = await this.sendMessage(text, finalContext, currentConversationID);
 
       // 流式响应时,子类已经添加并更新了消息,这里只需要清理状态
       this.setState({
-        textInput: '',
         isSending: false,
         streamingMessageId: null,
       });

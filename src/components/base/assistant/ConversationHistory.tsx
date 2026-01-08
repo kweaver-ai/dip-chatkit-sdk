@@ -45,7 +45,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const data = await onGetConversations();
+      const data = await onGetConversations(1, 1000);
       setConversations(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取历史会话失败');
