@@ -1,5 +1,5 @@
 import React from 'react';
-import { AssistantIcon } from '../../icons';
+import { AssistantIcon, MoreIcon, NewIcon, ExpandIcon, CloseIcon } from '../../icons';
 
 /**
  * Header 组件的属性接口
@@ -58,7 +58,7 @@ const Header: React.FC<HeaderProps> = ({
               className="w-5 h-5 flex items-center justify-center hover:opacity-70 transition-opacity"
               title="更多选项"
             >
-              <img src="/icons/more.svg" alt="更多" className="w-5 h-5" />
+              <MoreIcon className="w-5 h-5" />
             </button>
           )}
 
@@ -69,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({
               className="ml-2 w-[14px] h-[14px] flex items-center justify-center hover:opacity-70 transition-opacity"
               title="新建会话"
             >
-              <img src="/icons/new.svg" alt="新建会话" className="w-[14px] h-[14px]" />
+              <NewIcon className="w-[14px] h-[14px]" />
             </button>
           )}
 
@@ -80,7 +80,7 @@ const Header: React.FC<HeaderProps> = ({
               className="ml-2 w-[14px] h-[13px] flex items-center justify-center hover:opacity-70 transition-opacity"
               title="展开"
             >
-              <img src="/icons/expand.svg" alt="展开" className="w-[14px] h-[13px]" />
+              <ExpandIcon className="w-[14px] h-[13px]" />
             </button>
           )}
 
@@ -91,7 +91,7 @@ const Header: React.FC<HeaderProps> = ({
               className="ml-2 w-4 h-4 flex items-center justify-center hover:opacity-70 transition-opacity"
               title="关闭"
             >
-              <img src="/icons/close.svg" alt="关闭" className="w-4 h-4" />
+              <CloseIcon className="w-4 h-4" />
             </button>
           )}
         </div>

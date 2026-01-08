@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 全局样式 */
+html,
+body {
+  font-size: 14px;
+  line-height: 22px;
+  color: rgb(0, 0, 0, 0.85);
+}
+
 /* 自定义滚动条样式 */
 /* 纵向滚动条 */
 ::-webkit-scrollbar {

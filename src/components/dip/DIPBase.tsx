@@ -10,6 +10,7 @@ import {
   BlockType,
 } from '../../types';
 import { Constructor } from '../../utils/mixins';
+import { Text2SqlIcon } from '../icons';
 
 /**
  * DIP 的 AssistantMessage 接口
@@ -1269,6 +1270,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
               title: '代码执行',
               input: executeCodeResult.input,
               output: executeCodeResult.output,
+              icon: <Text2SqlIcon />,
             },
           });
         }
@@ -1280,16 +1282,17 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             type: BlockType.TOOL,
             content: {
               name: 'text2sql',
-              title: 'Text2SQL',
-              input: text2SqlResult.input,
+              title: text2SqlResult.title || 'Text2SQL',
+              input: text2SqlResult.sql,
+              icon: <Text2SqlIcon />,
               output: {
-                sql: text2SqlResult.sql,
+              
                 data: text2SqlResult.data,
-                cites: text2SqlResult.cites,
-                title: text2SqlResult.title,
-                message: text2SqlResult.message,
-                dataDesc: text2SqlResult.dataDesc,
-                explanation: text2SqlResult.explanation,
+                // cites: text2SqlResult.cites,
+                // title: text2SqlResult.title,
+                // message: text2SqlResult.message,
+                // dataDesc: text2SqlResult.dataDesc,
+                // explanation: text2SqlResult.explanation,
               },
             },
           });

@@ -392,6 +392,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param result Text2SQL 的输入和输出结果
    */
   protected appendText2SqlBlock(messageId: string, result: Text2SqlResult): void {
+  
     this.setState((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
