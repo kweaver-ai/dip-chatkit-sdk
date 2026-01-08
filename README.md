@@ -100,7 +100,7 @@ npm run build
 
 ### 5. 配置 AISHU DIP 接口
 
-- 编辑 `examples/chatkit_data_agent/config.ts`，填入你的 `baseUrl`、`agentId`、`token` 和 `businessDomain`。
+- 编辑 `examples/chatkit_data_agent/config.ts`，填入你的 `baseUrl`、`agentKey`、`token` 和 `businessDomain`。
 - `token` 需要包含 Bearer 前缀，例如：`Bearer ory_at_xxx`。
 
 ## 使用方法
@@ -206,7 +206,7 @@ function App() {
           visible={showChat}
           onClose={() => setShowChat(false)}
           baseUrl="https://dip.aishu.cn/api/agent-app/v1"
-          agentId="你的Agent ID"
+          agentKey="你的Agent Key"
           token="Bearer your-token"
           refreshToken={refreshToken}
           businessDomain="bd_public"
@@ -256,7 +256,7 @@ function App() {
         title="DIP Assistant"
         visible={true}
         baseUrl="https://dip.aishu.cn/api/agent-app/v1"
-        agentId="你的Agent ID"
+        agentKey="你的Agent Key"
         token="Bearer your-token"
         refreshToken={refreshToken}
         businessDomain="bd_public"
@@ -320,7 +320,7 @@ AISHU DIP 平台的 Copilot 模式组件。侧边跟随的 AI 助手，为应用
 | 属性名 | 类型 | 必填 | 默认值 | 说明 |
 |--------|------|------|--------|------|
 | baseUrl | `string` | 是 | - | DIP 服务端基础地址 |
-| agentId | `string` | 是 | - | Agent ID |
+| agentKey | `string` | 是 | - | Agent Key |
 | token | `string` | 是 | - | 访问令牌（需包含 Bearer 前缀） |
 | businessDomain | `string` | 否 | `'bd_public'` | 业务域 |
 | agentVersion | `string` | 否 | `'latest'` | Agent 版本 |
@@ -336,7 +336,7 @@ AISHU DIP 平台的 Assistant 模式组件。作为主交互入口，是应用�
 | 属性名 | 类型 | 必填 | 默认值 | 说明 |
 |--------|------|------|--------|------|
 | baseUrl | `string` | 是 | - | DIP 服务端基础地址 |
-| agentId | `string` | 是 | - | Agent ID |
+| agentKey | `string` | 是 | - | Agent Key |
 | token | `string` | 是 | - | 访问令牌（需包含 Bearer 前缀） |
 | businessDomain | `string` | 否 | `'bd_public'` | 业务域 |
 | agentVersion | `string` | 否 | `'latest'` | Agent 版本 |

@@ -1,5 +1,7 @@
 import React from 'react';
 import { ClockIcon } from '../../icons';
+import { MarkdownBlock } from './blocks';
+import { BlockType } from '@/types';
 
 /**
  * Prologue 组件的属性接口
@@ -51,11 +53,10 @@ const Prologue: React.FC<PrologueProps> = ({
         
         {/* 开场白 */}
         {prologue && (
-          <p className="text-[20px] leading-normal text-[rgba(0,0,0,0.85)] font-normal mb-6" style={{ fontFamily: 'Noto Sans SC' }}>
-            {prologue}
+          <p className="mb-6" style={{ fontFamily: 'Noto Sans SC' }}>
+            <MarkdownBlock block={{ type: BlockType.MARKDOWN, content: prologue }} fontSize={20} />
           </p>
         )}
-
 
         {/* Agent 简介 */}
         {agentInfo?.profile && (

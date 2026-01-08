@@ -77,10 +77,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
 
         {/* 消息内容 */}
         <div
-          className={`rounded-[8px] ${
+          className={`rounded-[6px] ${
             isUser
-              ? 'bg-[rgba(18,110,227,0.1)] text-[rgba(0,0,0,0.85)] px-[14px] py-[5px]'
-              : 'bg-white text-black px-4 py-3'
+              ? 'bg-[#DBE8FF] text-[rgba(0,0,0,0.85)] px-[14px] py-[5px]'
+              : 'bg-white text-black px-2 py-1'
           }`}
           style={{ fontFamily: 'Noto Sans SC' }}
         >
