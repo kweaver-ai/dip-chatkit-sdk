@@ -87,8 +87,8 @@ interface EventMessage {
  * DIPBase 的 props 接口
  */
 export interface DIPBaseProps {
-  /** AISHU DIP 的 Agent ID,用作路径参数 */
-  agentId: string;
+  /** AISHU DIP 的 Agent Key,用作路径参数 */
+  agentKey: string;
 
   /** 访问令牌,需要包含 Bearer 前缀 (已废弃，请使用 token 属性) */
   bearerToken?: string;
@@ -131,14 +131,11 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     /** 服务端基础地址 */
     public dipBaseUrl: string;
 
-    /** Agent ID */
-    public dipId: string;
-
     /** Agent Key (agent 标识) */
-    public dipKey: string = '';
+    public dipKey: string;
 
-    /** Agent Name (agent 名称) */
-    public dipName: string = '';
+    /** Agent 信息 */
+    public agentInfo: any;
 
     /** agent 版本 */
     public dipVersion: string;
@@ -162,7 +159,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       const props = args[0] as DIPBaseProps;
 
       this.dipBaseUrl = props.baseUrl || 'https://dip.aishu.cn/api/agent-app/v1';
-      this.dipId = props.agentId;
+      this.dipKey = props.agentKey;
       this.dipVersion = props.agentVersion || 'latest';
       this.dipExecutorVersion = props.executorVersion || 'v2';
       this.dipBusinessDomain = props.businessDomain || 'bd_public';
@@ -179,7 +176,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     /**
      * 获取开场白和预置问题
      * 调用 AISHU DIP 的 agent-factory API 获取智能体配置信息，提取开场白和预置问题
-     * API 端点: GET /api/agent-factory/v3/agent-market/agent/{agent_id}/version/v0
+     * API 端点: GET /api/agent-factory/v3/agent-market/agent/{agent_key}/version/v0
      * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
      * @returns 返回开场白信息，包含开场白文案和预置问题
      */
@@ -192,10 +189,10 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         if (this.dipBaseUrl.startsWith('http://') || this.dipBaseUrl.startsWith('https://')) {
           // 生产环境：使用完整 URL
           const baseUrlObj = new URL(this.dipBaseUrl);
-          agentFactoryUrl = `${baseUrlObj.protocol}//${baseUrlObj.host}/api/agent-factory/v3/agent-market/agent/${encodeURIComponent(this.dipId)}/version/v0`;
+          agentFactoryUrl = `${baseUrlObj.protocol}//${baseUrlObj.host}/api/agent-factory/v3/agent-market/agent/${encodeURIComponent(this.dipKey)}/version/v0`;
         } else {
           // 开发环境：使用相对路径走代理
-          agentFactoryUrl = `/api/agent-factory/v3/agent-market/agent/${encodeURIComponent(this.dipId)}/version/v0`;
+          agentFactoryUrl = `/api/agent-factory/v3/agent-market/agent/${encodeURIComponent(this.dipKey)}/version/v0`;
         }
 
         console.log('调用 agent-factory API:', agentFactoryUrl);
@@ -222,11 +219,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
           return await response.json();
         });
 
-        // 存储 agent key
-        if (result.key) {
-          this.dipKey = result.key;
-          this.dipName = result.name;
-        }
+        // 存储 agent name 和 id
+        this.agentInfo = result;
 
         // 从响应中提取开场白和预置问题
         const config = result.config || {};
@@ -262,7 +256,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     /**
      * 创建新的会话
      * 调用 DIP API 创建新的会话，返回会话 ID
-     * API 端点: POST /app/{agent_id}/conversation
+     * API 端点: POST /app/{agent_key}/conversation
      * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
      * @param title 会话标题，通常是用户发送的第一条消息内容
      * @returns 返回新创建的会话 ID
@@ -334,7 +328,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
       // 构造请求体
       const body = {
-        agent_id: this.dipId,
+        agent_id: this.agentInfo.id,
         agent_version: this.dipVersion,
         executor_version: this.dipExecutorVersion,
         query: fullQuery,
@@ -1412,7 +1406,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
     /**
      * 终止会话
-     * 调用 DIP 的 /app/{agent_id}/chat/termination 接口终止指定会话
+     * 调用 DIP 的 /app/{agent_key}/chat/termination 接口终止指定会话
      * @param conversationId 要终止的会话 ID
      * @returns 返回 Promise，成功时 resolve，失败时 reject
      */
@@ -1503,8 +1497,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
     /**
      * 获取历史会话列表
-     * 调用 DIP 的 GET /app/{agent_id}/conversation 接口获取会话列表
-     * API 端点: GET /app/{agent_id}/conversation?page={page}&size={size}
+     * 调用 DIP 的 GET /app/{agent_key}/conversation 接口获取会话列表
+     * API 端点: GET /app/{agent_key}/conversation?page={page}&size={size}
      * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
      * @param page 分页页码，默认为 1
      * @param size 每页返回条数，默认为 10
@@ -1562,9 +1556,9 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
     /**
      * 获取指定会话 ID 的对话消息列表
-     * 调用 DIP 的 GET /app/{agent_id}/conversation/{conversation_id} 接口获取会话详情
+     * 调用 DIP 的 GET /app/{agent_key}/conversation/{conversation_id} 接口获取会话详情
      * 如果对话消息是 AI 助手消息，则需要调用 reduceAssistantMessage() 解析消息
-     * API 端点: GET /app/{agent_id}/conversation/{conversation_id}
+     * API 端点: GET /app/{agent_key}/conversation/{conversation_id}
      * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
      * @param conversationId 会话 ID
      * @returns 返回对话消息列表
@@ -1695,8 +1689,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
     /**
      * 删除指定 ID 的会话
-     * 调用 DIP 的 DELETE /app/{agent_id}/conversation/{conversation_id} 接口删除会话
-     * API 端点: DELETE /app/{agent_id}/conversation/{conversation_id}
+     * 调用 DIP 的 DELETE /app/{agent_key}/conversation/{conversation_id} 接口删除会话
+     * API 端点: DELETE /app/{agent_key}/conversation/{conversation_id}
      * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
      * @param conversationID 会话 ID
      * @returns 返回 Promise，成功时 resolve，失败时 reject

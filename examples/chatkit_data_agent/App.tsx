@@ -115,7 +115,7 @@ export const ChatKitDataAgentDemo: React.FC = () => {
           <h2 className="text-lg font-semibold text-green-800 mb-2">Data Agent API 配置</h2>
           <ul className="text-sm text-green-700 space-y-1">
             <li>基础地址: {DATA_AGENT_CONFIG.baseUrl}</li>
-            <li>Agent ID: {DATA_AGENT_CONFIG.agentId}</li>
+            <li>Agent Key: {DATA_AGENT_CONFIG.agentKey}</li>
           </ul>
           <p className="text-xs text-green-700 mt-2">
             请确保 bearerToken 正确且包含 Bearer 前缀。
@@ -160,7 +160,7 @@ export const ChatKitDataAgentDemo: React.FC = () => {
             visible={showChat}
             onClose={() => setShowChat(false)}
             baseUrl={DATA_AGENT_CONFIG.baseUrl}
-            agentId={DATA_AGENT_CONFIG.agentId}
+            agentKey={DATA_AGENT_CONFIG.agentKey}
             token={DATA_AGENT_CONFIG.token}
             refreshToken={refreshToken}
             businessDomain={DATA_AGENT_CONFIG.businessDomain}

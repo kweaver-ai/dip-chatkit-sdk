@@ -125,7 +125,7 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
                   // 加载完成，显示开场白
                   <Prologue
                     onQuestionClick={this.handleQuestionClick}
-                    agentName={(this as any).dipName}
+                    agentInfo={(this as any).agentInfo}
                     prologue={onboardingInfo?.prologue}
                     predefinedQuestions={onboardingInfo?.predefinedQuestions}
                   />

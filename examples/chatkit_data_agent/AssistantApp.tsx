@@ -99,7 +99,7 @@ export const DIPAssistantDemo: React.FC = () => {
             title: 'DIP Assistant',
             visible: true,
             baseUrl: DATA_AGENT_CONFIG.baseUrl,
-            agentId: DATA_AGENT_CONFIG.agentId,
+            agentKey: DATA_AGENT_CONFIG.agentKey,
             token: DATA_AGENT_CONFIG.token,
             refreshToken: refreshToken,
             businessDomain: DATA_AGENT_CONFIG.businessDomain,

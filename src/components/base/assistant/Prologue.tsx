@@ -5,8 +5,8 @@ import { ClockIcon } from '../../icons';
  * Prologue 组件的属性接口
  */
 interface PrologueProps {
-  /** Agent Name (agent 名称) */
-  agentName?: string;
+  /** Agent 信息 */
+  agentInfo?: any;
 
   /** 点击推荐问题时的回调函数 */
   onQuestionClick?: (question: string) => void;
@@ -24,7 +24,7 @@ interface PrologueProps {
  */
 const Prologue: React.FC<PrologueProps> = ({
   onQuestionClick,
-  agentName,
+  agentInfo,
   prologue,
   predefinedQuestions
 }) => {
@@ -43,16 +43,24 @@ const Prologue: React.FC<PrologueProps> = ({
     <div className="w-full flex justify-center">
       <div className="w-full max-w-[960px] px-5 py-8">
         {/* Agent Name */}
-        {agentName && (
+        {agentInfo?.name && (
           <p className="text-4xl text-[rgba(0,0,0,0.85)] font-normal mb-6" style={{ fontFamily: 'Noto Sans SC' }}>
-            {agentName}
+            {agentInfo.name}
+          </p>
+        )}
+        
+        {/* 开场白 */}
+        {prologue && (
+          <p className="text-[20px] leading-normal text-[rgba(0,0,0,0.85)] font-normal mb-6" style={{ fontFamily: 'Noto Sans SC' }}>
+            {prologue}
           </p>
         )}
 
-        {/* 开场白 */}
-        {prologue && (
-          <p className="text-[20px] leading-normal text-[rgba(0,0,0,0.85)] font-normal mb-10" style={{ fontFamily: 'Noto Sans SC' }}>
-            {prologue}
+
+        {/* Agent 简介 */}
+        {agentInfo?.profile && (
+          <p className="text-[16px] leading-[26px] text-[rgba(0,0,0,0.65)] font-normal mb-6" style={{ fontFamily: 'Noto Sans SC' }}>
+            {agentInfo.profile}
           </p>
         )}
 
