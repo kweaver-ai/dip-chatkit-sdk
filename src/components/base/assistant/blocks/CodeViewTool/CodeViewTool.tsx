@@ -101,7 +101,7 @@ const CodeViewTool: React.FC<CodeViewToolProps> = ({
   code = '',
   language,
   width = '100%',
-  height = '400px',
+  height = '100%',
   className = '',
 }) => {
   // 确定使用的语言
@@ -133,42 +133,46 @@ const CodeViewTool: React.FC<CodeViewToolProps> = ({
         height: typeof height === 'number' ? `${height}px` : height,
         position: 'relative',
         overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      <ReactMarkdown
-        rehypePlugins={[rehypeHighlight]}
-        components={{
-          pre: ({ children, className: preClassName, ...props }) => {
-            // 保留 highlight.js 添加的 hljs 类名
-            const classes = preClassName 
-              ? `${preClassName} m-0 text-sm leading-relaxed font-mono`
-              : 'm-0 text-sm leading-relaxed font-mono';
-            return (
-              <pre {...props} className={classes}>
-                {children}
-              </pre>
-            );
-          },
-          code: ({ children, className: codeClassName, ...props }) => {
-            // 如果是代码块（有 className），保留 highlight.js 的所有类名
-            // 如果是行内代码（无 className），使用默认样式
-            if (codeClassName) {
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <ReactMarkdown
+          rehypePlugins={[rehypeHighlight]}
+          components={{
+            pre: ({ children, className: preClassName, ...props }) => {
+              // 保留 highlight.js 添加的 hljs 类名
+              const classes = preClassName 
+                ? `${preClassName} m-0 text-sm leading-relaxed font-mono h-full`
+                : 'm-0 text-sm leading-relaxed font-mono h-full';
               return (
-                <code {...props} className={codeClassName}>
+                <pre {...props} className={classes} style={{ height: '100%', margin: 0 }}>
+                  {children}
+                </pre>
+              );
+            },
+            code: ({ children, className: codeClassName, ...props }) => {
+              // 如果是代码块（有 className），保留 highlight.js 的所有类名
+              // 如果是行内代码（无 className），使用默认样式
+              if (codeClassName) {
+                return (
+                  <code {...props} className={codeClassName} style={{ display: 'block', height: '100%' }}>
+                    {children}
+                  </code>
+                );
+              }
+              return (
+                <code {...props} className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-sm font-mono">
                   {children}
                 </code>
               );
-            }
-            return (
-              <code {...props} className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-sm font-mono">
-                {children}
-              </code>
-            );
-          },
-        }}
-      >
-        {markdown}
-      </ReactMarkdown>
+            },
+          }}
+        >
+          {markdown}
+        </ReactMarkdown>
+      </div>
     </div>
   );
 };
