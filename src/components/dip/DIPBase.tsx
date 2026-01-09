@@ -530,13 +530,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
                 (this as any).appendJson2PlotBlock(messageId, chartData);
               }
             }
-            // 检查是否是 Text2SQL 工具
-            if (content?.skill_info?.name === 'text2sql') {
-              console.log('text2sql content', content);
-              const text2SqlResult = this.extractText2SqlResult(content.skill_info?.args, content.answer);
-              if (text2SqlResult) {
-                (this as any).appendText2SqlBlock(messageId, text2SqlResult);
-              }
+            // 检查是否是 search_memory, _date, build_memory 技能
+            const skillNameLower = content.skill_info?.name?.toLowerCase();
+            if (skillNameLower === 'search_memory' || skillNameLower === '_date' || skillNameLower === 'build_memory') {
+              // 这些技能默认不显示调用信息，或者根据需求进行特定处理
+              // 如果需要显示，可以添加相应的渲染逻辑
+              return;
             }
           } else if (content?.stage === 'llm') {
             // LLM 阶段，输出 answer
@@ -838,6 +837,14 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     }
 
     const skillName = skillInfo.name;
+    const skillNameLower = skillName.toLowerCase();
+
+    // 处理 search_memory, _date, build_memory 技能
+    if (skillNameLower === 'search_memory' || skillNameLower === '_date' || skillNameLower === 'build_memory') {
+      // 这些技能默认不显示调用信息，或者根据需求进行特定处理
+      // 如果需要显示，可以添加相应的渲染逻辑
+      return;
+    }
 
     if (skillName === 'zhipu_search_tool') {
       // Web 搜索工具
@@ -1218,8 +1225,16 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     if (item.stage === 'skill') {
       // 处理技能调用
       const skillName = item.skill_info?.name;
+      const skillNameLower = skillName?.toLowerCase();
 
       if(item.skill_info?.args?.some((item: any) => item?.name === 'action' && item?.value === 'show_ds')){
+        return;
+      }
+
+      // 处理 search_memory, _date, build_memory 技能
+      if (skillNameLower === 'search_memory' || skillNameLower === '_date' || skillNameLower === 'build_memory') {
+        // 这些技能默认不显示调用信息，或者根据需求进行特定处理
+        // 如果需要显示，可以添加相应的渲染逻辑
         return;
       }
 
