@@ -1,6 +1,7 @@
 import React from 'react';
 import { ApplicationContext } from '../../../types';
 import { CloseIcon, StopIcon, SendIcon } from '../../icons';
+import TaskInProgress from './TaskInProgress';
 
 /**
  * InputArea 组件的属性接口
@@ -71,6 +72,13 @@ const InputArea: React.FC<InputAreaProps> = ({
           >
             <CloseIcon />
           </button>
+        </div>
+      )}
+
+      {/* 任务进行中提示 */}
+      {isStreaming && (
+        <div className="flex justify-center mb-[12px]">
+          <TaskInProgress />
         </div>
       )}
 

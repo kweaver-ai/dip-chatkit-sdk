@@ -181,6 +181,7 @@ components:
           - $ref: "#/components/schemas/LLMAnswer"
           - $ref: "#/components/schemas/ToolAnswer"
           - $ref: "#/components/schemas/Text2SqlResult"
+          - $ref: "#/components/schemas/Text2MetricResult"
         think:
           type: string
           description: 执行步骤中的思考过程
@@ -262,6 +263,7 @@ components:
       oneOf:
       - "#/components/schemas/SearchIntent"
       - $ref: "#/components/schemas/Text2SqlIntent"
+      - $ref: "#/components/schemas/Text2MetricIntent"
     
     ToolResult:
       type: object
@@ -269,6 +271,7 @@ components:
       oneOf:
       - "#/components/schemas/SearchResult"
       - $ref: "#/components/schemas/Text2SqlResult"
+      - $ref: "#/components/schemas/Text2MetricResult"
     
     TokenUsage:
       type: object
@@ -565,6 +568,181 @@ components:
         description:
           type: string
           description: 数据源描述
+
+    Text2MetricIntent:
+      type: object
+      description: text2metric工具的输入查询
+      properties:
+        input:
+          type: string
+          description: 输入查询文本
+
+    Text2MetricResult:
+      type: object
+      description: text2metric工具的返回结果
+      properties:
+        result:
+          $ref: "#/components/schemas/Text2MetricResultData"
+        full_result:
+          $ref: "#/components/schemas/Text2MetricFullResultData"
+
+    Text2MetricResultData:
+      type: object
+      description: text2metric工具的结果数据
+      properties:
+        title:
+          type: string
+          description: 结果标题
+        data_desc:
+          $ref: "#/components/schemas/MetricDataDesc"
+        explanation:
+          type: string
+          description: 解释说明
+        reason:
+          type: string
+          description: 查询原因
+        query_params:
+          $ref: "#/components/schemas/MetricQueryParams"
+        step:
+          type: string
+          description: 时间聚合方式
+        unit:
+          type: string
+          description: 单位
+        unit_type:
+          type: string
+          description: 单位类型
+        data_summary:
+          $ref: "#/components/schemas/MetricDataSummary"
+        metric_id:
+          type: string
+          description: 指标ID
+        result_cache_key:
+          type: string
+          description: 结果缓存key
+        cites:
+          type: array
+          description: 指标引用列表
+          items:
+            $ref: "#/components/schemas/MetricCite"
+        data:
+          type: array
+          description: 数据样本
+          items:
+            type: object
+            additionalProperties: true
+
+    Text2MetricFullResultData:
+      type: object
+      description: text2metric工具的完整结果数据
+      properties:
+        data:
+          type: array
+          description: 完整数据
+          items:
+            type: object
+            additionalProperties: true
+        metric_id:
+          type: string
+          description: 指标ID
+        explanation:
+          type: string
+          description: 解释说明
+        step:
+          type: string
+          description: 时间聚合方式
+        unit:
+          type: string
+          description: 单位
+        unit_type:
+          type: string
+          description: 单位类型
+        result_cache_key:
+          type: string
+          description: 结果缓存key
+        data_summary:
+          $ref: "#/components/schemas/MetricDataSummary"
+        cites:
+          type: array
+          description: 指标引用列表
+          items:
+            $ref: "#/components/schemas/MetricCite"
+        reason:
+          type: string
+          description: 查询原因
+        title:
+          type: string
+          description: 结果标题
+        query_params:
+          $ref: "#/components/schemas/MetricQueryParams"
+
+    MetricDataDesc:
+      type: object
+      description: 指标数据描述信息
+      properties:
+        return_records_num:
+          type: integer
+          description: 返回记录数
+        real_records_num:
+          type: integer
+          description: 实际记录数
+
+    MetricDataSummary:
+      type: object
+      description: 指标数据摘要信息
+      properties:
+        unit:
+          type: string
+          description: 单位
+        unit_type:
+          type: string
+          description: 单位类型
+        total_data_points:
+          type: integer
+          description: 总数据点数
+        force_limit:
+          type: integer
+          description: 强制限制数
+        step:
+          type: string
+          description: 时间聚合方式
+
+    MetricQueryParams:
+      type: object
+      description: 指标查询参数
+      properties:
+        instant:
+          type: boolean
+          description: 是否即时查询
+        start:
+          type: string
+          description: 开始时间
+        end:
+          type: string
+          description: 结束时间
+        step:
+          type: string
+          description: 时间聚合方式
+        analysis_dimensions:
+          type: array
+          description: 分析维度列表
+          items:
+            type: string
+
+    MetricCite:
+      type: object
+      description: 指标引用信息
+      properties:
+        id:
+          type: string
+          description: 指标ID
+        name:
+          type: string
+          description: 指标名称
+        type:
+          type: string
+          description: 指标类型
+          enum: [metric]
 
     SkillInfo:
       type: object

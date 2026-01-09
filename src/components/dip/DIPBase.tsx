@@ -10,7 +10,7 @@ import {
   BlockType,
 } from '../../types';
 import { Constructor } from '../../utils/mixins';
-import { Text2SqlIcon } from '../icons';
+import { Text2SqlIcon, Text2MetricIcon } from '../icons';
 
 /**
  * DIP 的 AssistantMessage 接口
@@ -871,6 +871,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       if (text2SqlResult) {
         (this as any).appendText2SqlBlock(messageId, text2SqlResult);
       }
+    } else if (skillName === 'text2metric') {
+      // Text2Metric 工具：解析查询输入和指标数据
+      const text2MetricResult = this.extractText2MetricResult(skillInfo.args, answer);
+      if (text2MetricResult) {
+        (this as any).appendText2MetricBlock(messageId, text2MetricResult);
+      }
     } else {
       // 其他技能：输出技能名称
       (this as any).appendMarkdownBlock(messageId, `调用工具: ${skillName}`);
@@ -1213,6 +1219,55 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
   }
 
   /**
+   * 从 skill_info.args 和 answer 中提取 Text2Metric 结果
+   * 用于处理 text2metric 工具的输入和输出
+   * 根据 OpenAPI 规范，Text2MetricResult 包含 result 和 full_result
+   * - result: Text2MetricResultData（包含 data_desc，但可能只有数据样本）
+   * - full_result: Text2MetricFullResultData（包含完整数据，但没有 data_desc）
+   * 优先使用 full_result，如果没有则使用 result
+   * @param args skill_info.args 数组，包含查询参数
+   * @param answer 技能执行的 answer 字段，包含指标查询结果
+   * @returns Text2MetricResult 对象，包含 title、args、data 等信息
+   */
+  public extractText2MetricResult(
+    args: Array<{name?: string; type?: string; value?: string}> | undefined,
+    answer: any
+  ): { title: string; args: any; data?: Array<Record<string, any>> } | null {
+    try {
+      // 优先使用 full_result，如果没有则使用 result
+      // 根据 schema: Text2MetricResult { result: Text2MetricResultData, full_result: Text2MetricFullResultData }
+      const fullResult = answer?.full_result;
+      const result = answer?.result;
+      
+      // 如果两者都不存在，返回 null
+      if (!fullResult && !result) {
+        return null;
+      }
+
+      // 优先使用 full_result，如果没有则使用 result
+      const text2MetricData = fullResult || result;
+
+      // 从数据中提取字段
+      const title = text2MetricData?.title || '';
+      const data = text2MetricData?.data || [];
+
+      // 如果没有标题，返回 null
+      if (!title) {
+        return null;
+      }
+
+      return {
+        title,
+        args: args || [],
+        data: Array.isArray(data) ? data : [],
+      };
+    } catch (e) {
+      console.error('提取 Text2Metric 结果失败:', e);
+      return null;
+    }
+  }
+
+  /**
    * 将技能调用或 LLM 回答的内容追加到消息中
    * 用于历史消息解析，根据 stage 和 skill_info 将内容添加到 ChatMessage.content 数组
    * @param item Progress 或 OtherTypeAnswer 对象
@@ -1291,6 +1346,23 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
                 // message: text2SqlResult.message,
                 // dataDesc: text2SqlResult.dataDesc,
                 // explanation: text2SqlResult.explanation,
+              },
+            },
+          });
+        }
+      } else if (skillName === 'text2metric') {
+        // Text2Metric 工具
+        const text2MetricResult = this.extractText2MetricResult(item.skill_info?.args, item.answer);
+        if (text2MetricResult) {
+          message.content.push({
+            type: BlockType.TOOL,
+            content: {
+              name: 'text2metric',
+              title: text2MetricResult.title || 'Text2Metric',
+              input: text2MetricResult.args,
+              icon: <Text2MetricIcon />,
+              output: {
+                data: text2MetricResult.data,
               },
             },
           });

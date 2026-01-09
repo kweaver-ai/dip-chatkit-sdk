@@ -198,6 +198,13 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
   };
 
   /**
+   * 判断是否为 Text2Metric 工具
+   */
+  const isText2MetricTool = (): boolean => {
+    return toolName === 'text2metric';
+  };
+
+  /**
    * 渲染代码输入（使用 CodeViewTool）
    */
   const renderCodeInput = (code: string): React.ReactNode => {
@@ -244,6 +251,26 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
    * 渲染 JSON2Plot 输入（将对象格式化为 JSON 字符串）
    */
   const renderJson2PlotInput = (input: any): React.ReactNode => {
+    // 将输入对象格式化为 JSON 字符串
+    const jsonString = typeof input === 'string' 
+      ? input 
+      : JSON.stringify(input, null, 2);
+    
+    return (
+      <CodeViewTool
+        code={jsonString}
+        language="json"
+        width="100%"
+        height="100%"
+        className="border border-gray-200 rounded-lg"
+      />
+    );
+  };
+
+  /**
+   * 渲染 Text2Metric 输入（将 args 格式化为 JSON 字符串）
+   */
+  const renderText2MetricInput = (input: any): React.ReactNode => {
     // 将输入对象格式化为 JSON 字符串
     const jsonString = typeof input === 'string' 
       ? input 
@@ -446,6 +473,40 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
     );
   };
 
+  /**
+   * 渲染 Text2Metric 输出（包括数据表格等）
+   */
+  const renderText2MetricOutput = (output: any): React.ReactNode => {
+    if (!output || typeof output !== 'object') {
+      return <div className="text-sm text-gray-500">暂无数据</div>;
+    }
+
+    // 转换数据为 ChartDataSchema 格式
+    const chartData = output.data && Array.isArray(output.data) && output.data.length > 0
+      ? convertDataToChartSchema(output.data)
+      : null;
+
+    return (
+      <div className="h-full flex flex-col">
+        <h3 className="text-sm font-bold text-gray-900 mb-3">查询结果</h3>
+        <div className="flex-1 overflow-hidden">
+          {chartData ? (
+            <div className="border border-gray-200 rounded-lg p-4 h-full flex flex-col">
+              <TableView
+                data={chartData}
+                maxHeight="100%"
+                pagination={true}
+                pageSize={10}
+              />
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">暂无数据</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderJson2PlotOutput = (output: any): React.ReactNode => {
     // 检查 output 结构，支持两种格式：
     // 1. output.data 包含 ChartDataSchema
@@ -511,6 +572,17 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
         </div>
       );
     }
+
+    if (isText2MetricTool()) {
+      return (
+        <div className="h-full flex flex-col">
+          <h3 className="text-sm font-bold text-gray-900 mb-3">查询输入</h3>
+          <div className="flex-1 overflow-hidden">
+            {renderText2MetricInput(input)}
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="h-full flex flex-col">
         <h3 className="text-sm font-bold text-gray-900 mb-3">输入</h3>
@@ -546,6 +618,10 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
       return renderSqlOutput(output);
     }
 
+    if (isText2MetricTool()) {
+      return renderText2MetricOutput(output);
+    }
+
     if (isJson2PlotTool()) {
       return renderJson2PlotOutput(output);
     }
@@ -579,7 +655,7 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
       {/* 抽屉内容 */}
       <div
         ref={drawerRef}
-        className="fixed right-0 top-0 bottom-0 w-[600px] max-w-[90vw] bg-white shadow-xl z-50 flex flex-col animate-slide-in-right"
+        className="fixed right-0 top-0 bottom-0 w-[600px] max-w-[90vw] bg-white shadow-xl z-999 flex flex-col animate-slide-in-right"
       >
         {/* 头部 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">

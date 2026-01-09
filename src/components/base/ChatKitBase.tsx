@@ -1,6 +1,6 @@
 import { Component } from 'react';
-import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock } from '../../types';
-import { Text2SqlIcon } from '../icons';
+import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, Text2MetricResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock } from '../../types';
+import { Text2SqlIcon, Text2MetricIcon } from '../icons';
 
 /**
  * ChatKitBase 组件的属性接口
@@ -422,12 +422,48 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     });
   }
 
-   /**
-   * 添加 JSON2Plot 图表类型的消息块
-   * 该方法由子类调用，用于在消息中添加 JSON2Plot 图表数据
+  /**
+   * 添加 Text2Metric 工具类型的消息块
+   * 该方法由子类调用，用于在消息中添加 Text2Metric 查询结果
    * @param messageId 消息 ID
-   * @param chartData 图表数据 Schema
+   * @param result Text2Metric 的输入和输出结果
    */
+  protected appendText2MetricBlock(messageId: string, result: Text2MetricResult): void {
+    this.setState((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId === messageId) {
+          // 添加 Text2Metric 工具块
+          const newContent = [
+            ...msg.content,
+            {
+              type: BlockType.TOOL,
+              content: {
+                name: 'text2metric',
+                title: result.title,
+                icon: <Text2MetricIcon />,
+                input: result.args,
+                output: {
+                  data: result.data,
+                },
+              },
+            } as ToolBlock,
+          ];
+
+          return { ...msg, content: newContent };
+        }
+        return msg;
+      });
+
+      return { messages: newMessages };
+    });
+  }
+
+   /**
+    * 添加 JSON2Plot 图表类型的消息块
+    * 该方法由子类调用，用于在消息中添加 JSON2Plot 图表数据
+    * @param messageId 消息 ID
+    * @param chartData 图表数据 Schema
+    */
    protected appendJson2PlotBlock(messageId: string, chartData: ChartDataSchema): void {
     this.setState((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
