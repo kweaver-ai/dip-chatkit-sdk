@@ -56,7 +56,7 @@ const InputArea: React.FC<InputAreaProps> = ({
   };
 
   return (
-    <div className="w-full flex justify-center">
+    <div className="w-full flex justify-center pr-1.5">
       <div className="w-full max-w-[960px] px-5 pb-3">
       {/* 上下文标签 */}
       {context && context.title && (

@@ -8,13 +8,15 @@ import MessageItem from './MessageItem';
 interface MessageListProps {
   /** 消息列表 */
   messages: ChatMessage[];
+  /** 当前正在流式更新的消息 ID */
+  streamingMessageId?: string | null;
 }
 
 /**
  * MessageList 组件
  * 显示对话消息列表
  */
-const MessageList: React.FC<MessageListProps> = ({ messages }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -31,7 +33,11 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
   return (
     <div className="px-5 py-3">
       {messages.map((message) => (
-        <MessageItem key={message.messageId} message={message} />
+        <MessageItem 
+          key={message.messageId} 
+          message={message} 
+          isStreaming={message.messageId === streamingMessageId}
+        />
       ))}
       <div ref={messagesEndRef} />
     </div>

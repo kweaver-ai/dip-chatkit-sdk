@@ -9,22 +9,56 @@ import { AssistantIcon } from '../../icons';
 interface MessageItemProps {
   /** 消息对象 */
   message: ChatMessage;
+  /** 是否正在流式更新 */
+  isStreaming?: boolean;
 }
 
 /**
  * MessageItem 组件
  * 显示单条消息
  */
-const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
+const MessageItem: React.FC<MessageItemProps> = ({ message, isStreaming = false }) => {
   const isUser = message.role.type === RoleType.USER;
+
+  /**
+   * 检查消息是否有实际内容
+   */
+  const hasContent = () => {
+    if (Array.isArray(message.content)) {
+      // 检查是否有非空的内容块
+      return message.content.some(block => {
+        if (block.type === BlockType.TEXT || block.type === BlockType.MARKDOWN) {
+          return (block.content as string)?.trim().length > 0;
+        }
+        return true; // 其他类型的块都认为有内容
+      });
+    }
+    // 字符串类型的内容
+    return (message.content as unknown as string)?.trim().length > 0;
+  };
+
+  /**
+   * 渲染预加载 UI
+   */
+  const renderLoadingPlaceholder = () => {
+    return (
+      <span className="shiny-text text-[14px]" style={{ fontFamily: 'Noto Sans SC' }}>
+        正在思考...
+      </span>
+    );
+  };
 
   /**
    * 渲染消息内容块
    * 根据不同的 BlockType 使用不同的组件进行渲染
    */
   const renderContentBlocks = () => {
+    // 如果正在流式更新且没有内容，显示预加载 UI
+    if (isStreaming && !hasContent()) {
+      return renderLoadingPlaceholder();
+    }
+
     // 如果 content 是数组，则渲染 Block 数组
-   
     if (Array.isArray(message.content)) {
       return (
         <div className="space-y-2">
@@ -57,15 +91,15 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   };
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6`}>
       {/* AI 头像 (仅助手消息) */}
       {!isUser && (
-        <div className="w-[21px] h-[21px] mr-2 flex-shrink-0 mt-1">
+        <div className="w-[21px] h-[21px] mr-2 flex-shrink-0">
           <AssistantIcon className="w-[21px] h-[21px]" />
         </div>
       )}
 
-      <div className="flex flex-col gap-2 max-w-[calc(100%-40px)]">
+      <div className={`flex flex-col gap-2 ${isUser ? 'max-w-[calc(100%-40px)]' : 'w-full' }`}>
         {/* 如果用户消息包含应用上下文，在消息内容中显示 */}
         {isUser && message.applicationContext && message.applicationContext.title && (
           <div className="self-end">
@@ -80,7 +114,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           className={`rounded-[6px] ${
             isUser
               ? 'bg-[#DBE8FF] text-[rgba(0,0,0,0.85)] px-[14px] py-[5px]'
-              : 'bg-white text-black px-2 py-1'
+              : 'bg-white text-black'
           }`}
           style={{ fontFamily: 'Noto Sans SC' }}
         >

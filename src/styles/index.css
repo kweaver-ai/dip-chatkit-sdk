@@ -18,16 +18,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: rgba(0,0,0,0.25);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgba(0,0,0,0.5);
 }
 
 /* Markdown 渲染样式 */
@@ -39,7 +39,7 @@ body {
 
 .markdown-body p {
   margin: 0 0 16px 0;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--markdown-base-font-color, rgba(0, 0, 0, 0.85));
 }
 
 .markdown-body p:last-child {
@@ -128,7 +128,7 @@ body {
 .markdown-body ol {
   padding-inline-start: 2em;
   margin: 0.25rem 0 0.5rem;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--markdown-base-font-color, rgba(0, 0, 0, 0.85));
 }
 
 .markdown-body ul {
@@ -354,4 +354,30 @@ pre.hljs {
 
 .dark pre.hljs {
   background: #1e1e1e;
+}
+
+/* ShinyText 闪光动画效果 */
+.shiny-text {
+  color: rgba(0, 0, 0, 0.65);
+  background: linear-gradient(120deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.85) 50%, rgba(0, 0, 0, 0) 60%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  display: block;
+  animation: shine 5s linear infinite;
+}
+
+.shiny-text-disabled {
+  animation: none;
+  background: none;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+@keyframes shine {
+  0% {
+    background-position: 100%;
+  }
+  100% {
+    background-position: -100%;
+  }
 }

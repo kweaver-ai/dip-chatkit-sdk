@@ -55,7 +55,7 @@ export abstract class CopilotBase<P extends ChatKitBaseProps = ChatKitBaseProps>
               />
             )
           ) : (
-            <MessageList messages={messages} />
+            <MessageList messages={messages} streamingMessageId={streamingMessageId} />
           )}
         </div>
 
