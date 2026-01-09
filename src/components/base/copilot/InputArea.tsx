@@ -57,7 +57,7 @@ const InputArea: React.FC<InputAreaProps> = ({
   return (
     <div className="px-5 pb-3 bg-white">
       {/* 整体输入容器 */}
-      <div className="relative h-40">
+      <div className="relative h-[112px]">
         {/* 上下文标签 */}
         {context && context.title && (
           <div className="absolute top-0 left-1 right-1 bg-[rgba(18,110,227,0.04)] rounded-lg px-4 py-2 h-10 flex items-center">
@@ -94,6 +94,8 @@ const InputArea: React.FC<InputAreaProps> = ({
             left: 0,
             right: 0,
             bottom: 0,
+            background: 'linear-gradient(#fff,#fff) padding-box, linear-gradient(45.59deg, #3B9BE0 -3.35%, #FFAA00 57.9%, rgba(50, 50, 50, 0.646918) 102.8%) border-box',
+            border: '1.5px solid transparent' 
           }}
         >
           {/* 输入框 */}

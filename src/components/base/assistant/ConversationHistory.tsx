@@ -215,7 +215,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
               {agentName && (
                 <div className="mb-[14px] flex flex-col items-center gap-y-[10px]">
                   {/* Agent 图标 */}
-                  <div className="w-[48px] h-[48px] bg-[#52c41a] rounded-full flex items-center justify-center">
+                  {/* <div className="w-[48px] h-[48px] bg-[#52c41a] rounded-full flex items-center justify-center">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                       <path
                         d="M12 2L2 7L12 12L22 7L12 2Z"
@@ -240,7 +240,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                         strokeLinejoin="round"
                       />
                     </svg>
-                  </div>
+                  </div> */}
                   <p
                     className="text-[16px] font-medium text-[rgba(0,0,0,0.85)]"
                     style={{ fontFamily: 'Noto Sans SC' }}

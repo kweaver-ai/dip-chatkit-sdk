@@ -1,4 +1,6 @@
 import React from 'react';
+import { MarkdownBlock } from './blocks';
+import { BlockType } from '@/types';
 
 /**
  * Prologue 组件的属性接口
@@ -54,10 +56,10 @@ const Prologue: React.FC<PrologueProps> = ({
     <div className="flex flex-col gap-4 px-6 pt-28 pb-4">
       {/* 欢迎语 */}
       <p
-        className="text-[14px] leading-[17px] text-[rgba(0,0,0,0.65)]"
+        className="leading-[17px]"
         style={{ fontFamily: 'Noto Sans SC' }}
       >
-        {displayPrologue}
+        <MarkdownBlock block={{ type: BlockType.MARKDOWN, content: displayPrologue }} fontColor="rgba(0,0,0,0.65)" />
       </p>
 
       {/* 推荐问题列表 */}

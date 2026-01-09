@@ -111,7 +111,7 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
           {/* 主区域 - 对话界面 */}
           <div className="flex-1 flex flex-col">
             {/* 消息列表区域或欢迎界面 */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-scroll">
               {showPrologue ? (
                 isLoadingOnboarding ? (
                   // 加载中，显示加载提示
@@ -131,7 +131,7 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
                   />
                 )
               ) : (
-                <MessageList messages={messages} />
+                <MessageList messages={messages} streamingMessageId={streamingMessageId} />
               )}
             </div>
 
@@ -152,7 +152,7 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
 
           {/* 右侧边栏 - 历史对话和新对话按钮 */}
           {enableHistory && (
-            <div className="w-[320px] bg-white flex flex-col">
+            <div className="w-[300px] bg-white flex flex-col">
               <div className="px-6 pt-6 flex flex-col gap-2">
                 {/* 相关历史对话按钮 */}
                 <button
@@ -207,7 +207,7 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
             onGetConversations={this.handleGetConversations}
             onLoadConversation={this.handleLoadConversation}
             onDeleteConversation={this.handleDeleteConversation}
-            agentName={(this as any).dipName}
+            agentName={(this as any).agentInfo?.name}
           />
         )}
       </>
