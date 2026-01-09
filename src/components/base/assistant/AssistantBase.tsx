@@ -3,6 +3,7 @@ import MessageList from './MessageList';
 import InputArea from './InputArea';
 import Prologue from './Prologue';
 import ConversationHistory from './ConversationHistory';
+import { MoreIcon, NewIcon } from '@/components/icons';
 
 /**
  * AssistantBase 组件的属性接口
@@ -157,41 +158,20 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
                 {/* 相关历史对话按钮 */}
                 <button
                   onClick={this.handleHistory}
-                  className="flex items-center gap-2 text-[14px] text-[rgba(0,0,0,0.85)] hover:text-[#1890ff] transition-colors"
+                  className="flex items-center gap-2 text-[14px] text-[rgba(0,0,0,0.85)] hover:text-[#126EE3] transition-colors"
                   style={{ fontFamily: 'Noto Sans SC' }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path
-                      d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      fill="none"
-                    />
-                    <path
-                      d="M8 5V8L10 10"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <MoreIcon className="w-[14px] h-[14px]" />
                   <span className="leading-[30px]">相关历史对话</span>
                 </button>
 
                 {/* 新对话按钮 */}
                 <button
                   onClick={this.handleNewChat}
-                  className="flex items-center gap-2 text-[14px] text-[rgba(0,0,0,0.85)] hover:text-[#1890ff] transition-colors"
+                  className="flex items-center gap-2 text-[14px] text-[rgba(0,0,0,0.85)] hover:text-[#126EE3] transition-colors"
                   style={{ fontFamily: 'Noto Sans SC' }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path
-                      d="M14 9H9V14H7V9H2V7H7V2H9V7H14V9Z"
-                      fill="currentColor"
-                    />
-                  </svg>
+                  <NewIcon className="w-[14px] h-[14px]" />
                   <span className="leading-[30px]">新对话</span>
                 </button>
               </div>

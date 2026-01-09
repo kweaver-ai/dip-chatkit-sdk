@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ConversationHistory as ConversationHistoryType, DateRange } from '../../../types';
-import Avatar from '@/components/Avatar';
+import {
+  ConversationHistory as ConversationHistoryType,
+  DateRange,
+} from '../../../types';
+import Avatar from '@/components/Avatar'
+import { CloseIcon } from '@/components/icons'
 
 /**
  * 历史会话列表组件的属性接口
@@ -161,17 +165,9 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           </h2>
           <button
             onClick={onClose}
-            className="w-[24px] h-[24px] flex items-center justify-center text-[rgba(0,0,0,0.45)] hover:text-[rgba(0,0,0,0.85)] transition-colors"
+            className="w-[24px] h-[24px] flex items-center justify-center text-[rgba(0,0,0,0.65)] hover:text-[rgba(0,0,0,1)] transition-colors"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M12 4L4 12M4 4L12 12"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <CloseIcon />
           </button>
         </div>
 

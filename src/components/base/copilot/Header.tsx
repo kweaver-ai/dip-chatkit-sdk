@@ -1,24 +1,30 @@
-import React from 'react';
-import { AssistantIcon, MoreIcon, NewIcon, ExpandIcon, CloseIcon } from '../../icons';
+import React from 'react'
+import {
+  AssistantIcon,
+  MoreIcon,
+  NewIcon,
+  ExpandIcon,
+  CloseIcon,
+} from '../../icons'
 
 /**
  * Header 组件的属性接口
  */
 interface HeaderProps {
   /** 组件标题 */
-  title?: string;
+  title?: string
 
   /** 关闭组件的回调函数 */
-  onClose?: () => void;
+  onClose?: () => void
 
   /** 新建会话的回调函数 */
-  onNewChat?: () => void;
+  onNewChat?: () => void
 
   /** 展开/收起的回调函数 */
-  onExpand?: () => void;
+  onExpand?: () => void
 
   /** 更多选项的回调函数 */
-  onMore?: () => void;
+  onMore?: () => void
 }
 
 /**
@@ -43,7 +49,10 @@ const Header: React.FC<HeaderProps> = ({
           </div>
           {/* 标题 */}
           <div className="absolute left-[40px] top-1/2 -translate-y-1/2">
-            <p className="font-medium text-[18px] leading-4 text-black whitespace-nowrap" style={{ fontFamily: 'Noto Sans SC' }}>
+            <p
+              className="font-medium text-[18px] leading-4 text-black whitespace-nowrap"
+              style={{ fontFamily: 'Noto Sans SC' }}
+            >
               {title}
             </p>
           </div>
@@ -55,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({
           {onMore && (
             <button
               onClick={onMore}
-              className="w-5 h-5 flex items-center justify-center hover:opacity-70 transition-opacity"
+              className="w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
               title="更多选项"
             >
               <MoreIcon className="w-5 h-5" />
@@ -66,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({
           {onNewChat && (
             <button
               onClick={onNewChat}
-              className="ml-2 w-[14px] h-[14px] flex items-center justify-center hover:opacity-70 transition-opacity"
+              className="ml-3 w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
               title="新建会话"
             >
               <NewIcon className="w-[14px] h-[14px]" />
@@ -77,7 +86,7 @@ const Header: React.FC<HeaderProps> = ({
           {onExpand && (
             <button
               onClick={onExpand}
-              className="ml-2 w-[14px] h-[13px] flex items-center justify-center hover:opacity-70 transition-opacity"
+              className="ml-3 w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
               title="展开"
             >
               <ExpandIcon className="w-[14px] h-[13px]" />
@@ -88,16 +97,16 @@ const Header: React.FC<HeaderProps> = ({
           {onClose && (
             <button
               onClick={onClose}
-              className="ml-2 w-4 h-4 flex items-center justify-center hover:opacity-70 transition-opacity"
+              className="ml-3 w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
               title="关闭"
             >
-              <CloseIcon className="w-4 h-4" />
+              <CloseIcon />
             </button>
           )}
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Header;
+export default Header
