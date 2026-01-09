@@ -10,6 +10,7 @@ ChatKit 是一个 AI 对话组件。Web 应用开发者可以将 ChatKit 集成�
 - **应用上下文**: 支持注入应用上下文，让 AI 理解用户操作背景
 - **流式响应**: 支持 SSE 流式响应，实现打字机效果
 - **Markdown 渲染**: AI 助手消息支持 Markdown 格式渲染
+- **消息复制**: 支持复制消息内容，支持富文本（HTML）和纯文本格式，可粘贴到 Word 等应用
 - **Web 搜索**: 支持显示 Web 搜索结果
 - **多平台适配**: 支持扣子(Coze)、AISHU DIP 平台等
 - **TypeScript Mixin**: 使用 Mixin 模式实现多重继承，代码复用性强
@@ -46,7 +47,8 @@ chatkit/
 │   │   │   └── Assistant.tsx           # DIP Assistant 组件
 │   │   └── icons/                      # 图标组件
 │   ├── utils/                          # 工具函数
-│   │   └── mixins.ts                   # TypeScript Mixin 工具
+│   │   ├── mixins.ts                   # TypeScript Mixin 工具
+│   │   └── copyMessage.ts              # 消息复制工具函数
 │   ├── types/                          # TypeScript 类型定义
 │   │   └── index.ts                    # 类型定义文件
 │   ├── styles/                         # 样式文件

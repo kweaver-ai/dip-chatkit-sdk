@@ -7,7 +7,7 @@ export const DATA_AGENT_CONFIG = {
   /** Agent Key */
   agentKey: '01KATFEH4RDWDHTY5ZJSGRENBE',
   /** Token (不带 Bearer 前缀) */
-  token: 'ory_at_F6OrdbN1snsbwA_S99vQ4OpMTZQEJC7L1Dul3HQPIwk.QayxSEf3HLDlI2Cy3TdaknMEpCC29V2hC_OUT2QxQtM',
+  token: 'ory_at_eVBfvnUHMHe1JXwVFhln3BVGlVJm13GwzVnq08C9fDk.Q5FWJZNPVVq4f8ZxZedwfbYfyUScF9hpPF6q1gNARK8',
   /** 业务域 */
   businessDomain: 'bd_public'
 };
