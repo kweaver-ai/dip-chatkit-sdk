@@ -11,7 +11,7 @@ export const StopIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => {
       viewBox="0 0 24 24"
       {...props}
     >
-      <rect x="6" y="6" width="12" height="12" />
+      <rect x="4" y="4" width="16" height="16" rx="4" />
     </svg>
   );
 };

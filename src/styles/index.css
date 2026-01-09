@@ -363,8 +363,8 @@ pre.hljs {
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
-  display: block;
-  animation: shine 5s linear infinite;
+  display: inline-block;
+  animation: shine 2s linear infinite;
 }
 
 .shiny-text-disabled {

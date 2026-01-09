@@ -1,5 +1,6 @@
 import React from 'react';
 import { ApplicationContext } from '../../../types';
+import { SendIcon, StopIcon } from '@/components/icons';
 
 /**
  * InputArea 组件的属性接口
@@ -115,26 +116,20 @@ const InputArea: React.FC<InputAreaProps> = ({
             // 停止按钮：在接收 AI 流式响应时显示
             <button
               onClick={onStop}
-              className="absolute bottom-3 right-3 w-8 h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 rounded transition-colors"
+              className="absolute bottom-3 right-4 w-8 h-8 flex items-center justify-center bg-[#126EE3] hover:bg-[#126EE3] rounded-md transition-colors"
               title="停止响应"
             >
-              <svg
-                className="w-4 h-4 text-white"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <rect x="6" y="6" width="12" height="12" />
-              </svg>
+              <StopIcon />
             </button>
           ) : (
             // 发送按钮：正常状态下显示
             <button
               onClick={onSend}
               disabled={disabled || !value.trim()}
-              className="absolute bottom-3 right-3 w-8 h-8 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+              className="absolute bottom-3 right-4 w-8 h-8 flex items-center justify-center bg-[#126EE3] hover:bg-[#126EE3] rounded-md transition-colors disabled:opacity-25 disabled:cursor-not-allowed transition-opacity"
               title={disabled ? '正在发送...' : '发送消息'}
             >
-              <img src="/icons/send.svg" alt="发送" className="w-8 h-8" />
+              <SendIcon disabled={disabled || !value.trim()} />
             </button>
           )}
         </div>
