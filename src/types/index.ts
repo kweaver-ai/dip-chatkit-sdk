@@ -208,6 +208,22 @@ export interface Text2SqlResult {
 }
 
 /**
+ * Text2Metric 结果接口
+ * Text2Metric 工具的输入和输出信息
+ * 根据 OpenAPI 规范，answer 包含 result 和 full_result
+ * - result: Text2MetricResultData（包含 data_desc，但可能只有数据样本）
+ * - full_result: Text2MetricFullResultData（包含完整数据，但没有 data_desc）
+ */
+export interface Text2MetricResult {
+  /** 结果标题 */
+  title: string;
+  /** 查询结果数据 */
+  data: Array<Record<string, any>>;
+  /** 查询参数（args） */
+  args: any;
+}
+
+/**
  * 工具调用数据接口
  * 工具调用的输入和输出信息
  */
