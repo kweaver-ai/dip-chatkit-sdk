@@ -1,6 +1,9 @@
 {
-  "name": "@dip/chatkit",
-  "version": "1.0.5",
+  "name": "@kweaver-ai/chatkit",
+  "version": "0.1.0",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "description": "AI 对话组件 - ChatKit",
   "main": "dist/chatkit.cjs.js",
