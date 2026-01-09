@@ -2,6 +2,7 @@ import React from 'react';
 import { ChatMessage, RoleType, BlockType } from '../../../types';
 import { TextBlock, MarkdownBlock, WebSearchBlock, Json2PlotBlock, ToolBlock } from './blocks';
 import { AssistantIcon } from '../../icons';
+import Avatar from '@/components/Avatar';
 
 /**
  * MessageItem 组件的属性接口
@@ -11,13 +12,15 @@ interface MessageItemProps {
   message: ChatMessage;
   /** 是否正在流式更新 */
   isStreaming?: boolean;
+  /** 助手信息 */
+  agentAvatar?: string;
 }
 
 /**
  * MessageItem 组件
  * 显示单条消息
  */
-const MessageItem: React.FC<MessageItemProps> = ({ message, isStreaming = false }) => {
+const MessageItem: React.FC<MessageItemProps> = ({ message, isStreaming = false, agentAvatar }) => {
   const isUser = message.role.type === RoleType.USER;
 
   /**
@@ -95,7 +98,9 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isStreaming = false 
       {/* AI 头像 (仅助手消息) */}
       {!isUser && (
         <div className="w-[21px] h-[21px] mr-2 flex-shrink-0">
-          <AssistantIcon className="w-[21px] h-[21px]" />
+          {
+            agentAvatar ? <Avatar name={agentAvatar} className="w-[21px] h-[21px]" /> : <AssistantIcon className="w-[21px] h-[21px]" />
+          }
         </div>
       )}
 

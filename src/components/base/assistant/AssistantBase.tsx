@@ -131,7 +131,7 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
                   />
                 )
               ) : (
-                <MessageList messages={messages} streamingMessageId={streamingMessageId} />
+                <MessageList messages={messages} streamingMessageId={streamingMessageId} agentAvatar={(this as any).agentInfo?.avatar} />
               )}
             </div>
 
@@ -207,7 +207,7 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
             onGetConversations={this.handleGetConversations}
             onLoadConversation={this.handleLoadConversation}
             onDeleteConversation={this.handleDeleteConversation}
-            agentName={(this as any).agentInfo?.name}
+            agentInfo={(this as any).agentInfo}
           />
         )}
       </>

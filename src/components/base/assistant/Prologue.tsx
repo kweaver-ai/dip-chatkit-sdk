@@ -2,6 +2,7 @@ import React from 'react';
 import { ClockIcon } from '../../icons';
 import { MarkdownBlock } from './blocks';
 import { BlockType } from '@/types';
+import Avatar from '@/components/Avatar';
 
 /**
  * Prologue 组件的属性接口
@@ -46,7 +47,8 @@ const Prologue: React.FC<PrologueProps> = ({
       <div className="w-full max-w-[960px] px-5 py-8">
         {/* Agent Name */}
         {agentInfo?.name && (
-          <p className="text-4xl text-[rgba(0,0,0,0.85)] font-normal mb-6" style={{ fontFamily: 'Noto Sans SC' }}>
+          <p className="text-4xl text-[rgba(0,0,0,0.85)] font-normal mb-6 flex items-center gap-5" style={{ fontFamily: 'Noto Sans SC' }}>
+            <Avatar name={agentInfo.avatar} width={64} height={64} />
             {agentInfo.name}
           </p>
         )}

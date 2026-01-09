@@ -10,13 +10,16 @@ interface MessageListProps {
   messages: ChatMessage[];
   /** 当前正在流式更新的消息 ID */
   streamingMessageId?: string | null;
+
+  /** 助手信息 */
+  agentAvatar?: string;
 }
 
 /**
  * MessageList 组件
  * 显示对话消息列表
  */
-const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId, agentAvatar }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   console.log('messages', messages);
 
@@ -39,6 +42,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId 
             key={message.messageId} 
             message={message} 
             isStreaming={message.messageId === streamingMessageId}
+            agentAvatar={agentAvatar}
           />
         ))}
         <div ref={messagesEndRef} />

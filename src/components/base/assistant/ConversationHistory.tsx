@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ConversationHistory as ConversationHistoryType, DateRange } from '../../../types';
+import Avatar from '@/components/Avatar';
 
 /**
  * 历史会话列表组件的属性接口
@@ -16,7 +17,7 @@ interface ConversationHistoryProps {
   /** 删除指定会话的回调函数 */
   onDeleteConversation: (conversationId: string) => Promise<void>;
   /** Agent Name (agent 名称) */
-  agentName?: string;
+  agentInfo?: any;  
 }
 
 /**
@@ -30,7 +31,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   onGetConversations,
   onLoadConversation,
   onDeleteConversation,
-  agentName,
+  agentInfo,
 }) => {
   const [conversations, setConversations] = useState<ConversationHistoryType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -212,40 +213,16 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           {!loading && !error && conversations.length > 0 && (
             <div className="px-[14px] pb-[14px]">
               {/* 展示 Agent Name */}
-              {agentName && (
+              {agentInfo?.name && (
                 <div className="mb-[14px] flex flex-col items-center gap-y-[10px]">
                   {/* Agent 图标 */}
-                  {/* <div className="w-[48px] h-[48px] bg-[#52c41a] rounded-full flex items-center justify-center">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M12 2L2 7L12 12L22 7L12 2Z"
-                        stroke="white"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fill="none"
-                      />
-                      <path
-                        d="M2 17L12 22L22 17"
-                        stroke="white"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M2 12L12 17L22 12"
-                        stroke="white"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div> */}
+                  <Avatar name={agentInfo.avatar} width={64} height={64} />
+         
                   <p
                     className="text-[16px] font-medium text-[rgba(0,0,0,0.85)]"
                     style={{ fontFamily: 'Noto Sans SC' }}
                   >
-                    {agentName}
+                    {agentInfo.name}
                   </p>
                 </div>
               )}
