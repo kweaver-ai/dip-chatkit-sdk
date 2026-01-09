@@ -336,6 +336,14 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         stream: true,
         custom_querys: ctx?.data,
         conversation_id: conversationID || undefined,
+        chat_option: {
+          is_need_history: true,
+          is_need_doc_retrival_post_process: true,
+          is_need_progress: true,
+          enable_dependency_cache: true,
+        },
+        inc_stream: true,
+
       };
 
       // 使用 executeDataAgentWithTokenRefresh 包装 API 调用
@@ -506,24 +514,27 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     } = {
       'upsert:error': {},
       'upsert:message': {},
-      'append:message.content.final_answer.answer.text': {
-        postProcess: (assistantMessage, _content, messageId) => {
-          // 从 AssistantMessage 中提取完整的文本内容
-          const text = assistantMessage.message?.content?.final_answer?.answer?.text || '';
-          // 调用 appendMarkdownBlock 方法更新界面上的 Markdown 块
-          (this as any).appendMarkdownBlock(messageId, text);
-        },
-      },
-      'upsert:message.content.final_answer.answer_type_other': {
-        postProcess: (_assistantMessage, content, messageId) => {
-          // content 是一个 OtherTypeAnswer 对象
-          this.processFinalAnswerTypeOther(content, messageId);
-        },
-      },
+      // 'append:message.content.final_answer.answer.text': {
+      //   postProcess: (assistantMessage, _content, messageId) => {
+      //     // 从 AssistantMessage 中提取完整的文本内容
+      //     const text = assistantMessage.message?.content?.final_answer?.answer?.text || '';
+      //     // 调用 appendMarkdownBlock 方法更新界面上的 Markdown 块
+      //     (this as any).appendMarkdownBlock(messageId, text);
+      //   },
+      // },
+      // 'upsert:message.content.final_answer.answer_type_other': {
+      //   postProcess: (_assistantMessage, content, messageId) => {
+      //     // content 是一个 OtherTypeAnswer 对象
+      //     this.processFinalAnswerTypeOther(content, messageId);
+      //   },
+      // },
       'append:message.content.middle_answer.progress': {
         postProcess: (_assistantMessage, content, messageId) => {
           // content 是一个 Progress 对象
           if (content?.stage === 'skill') {
+            if(content.skill_info?.args?.some((item: any) => item?.name === 'action' && item?.value === 'show_ds')){
+              return;
+            }
             // 检查是否是 Web 搜索工具
             if (content.skill_info?.name === 'zhipu_search_tool') {
               // 构造 WebSearchQuery 并调用渲染方法
@@ -1239,6 +1250,10 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     if (item.stage === 'skill') {
       // 处理技能调用
       const skillName = item.skill_info?.name;
+
+      if(item.skill_info?.args?.some((item: any) => item?.name === 'action' && item?.value === 'show_ds')){
+        return;
+      }
 
       if (skillName === 'zhipu_search_tool') {
         // Web 搜索
