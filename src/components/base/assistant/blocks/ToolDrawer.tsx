@@ -655,7 +655,7 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
       {/* 抽屉内容 */}
       <div
         ref={drawerRef}
-        className="fixed right-0 top-0 bottom-0 w-[600px] max-w-[90vw] bg-white shadow-xl z-999 flex flex-col animate-slide-in-right"
+        className="fixed right-0 top-0 bottom-0 w-[600px] max-w-[90vw] bg-white shadow-xl z-[999] flex flex-col animate-slide-in-right"
       >
         {/* 头部 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
