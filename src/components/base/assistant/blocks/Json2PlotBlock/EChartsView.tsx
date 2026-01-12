@@ -52,10 +52,16 @@ const EChartsView: React.FC<EChartsViewProps> = ({
     if (!chartRef.current || !option) return;
     
     try {
-      if (!chartInstanceRef.current) {
-        chartInstanceRef.current = echarts.init(chartRef.current);
+      // 当图表类型改变时，先清理旧的图表实例
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.dispose();
+        chartInstanceRef.current = null;
       }
-      chartInstanceRef.current.setOption(option, { notMerge: false });
+      
+      // 重新初始化图表实例
+      chartInstanceRef.current = echarts.init(chartRef.current);
+      // 使用 notMerge: true 确保完全替换配置，避免不同图表类型之间产生冲突
+      chartInstanceRef.current.setOption(option, { notMerge: true, lazyUpdate: false });
       
       // 处理窗口大小变化（防抖）
       let resizeTimer: NodeJS.Timeout;
@@ -70,21 +76,16 @@ const EChartsView: React.FC<EChartsViewProps> = ({
       return () => {
         window.removeEventListener('resize', handleResize);
         clearTimeout(resizeTimer);
+        // 清理图表实例
+        if (chartInstanceRef.current) {
+          chartInstanceRef.current.dispose();
+          chartInstanceRef.current = null;
+        }
       };
     } catch (error) {
       console.error('图表初始化失败:', error);
     }
-  }, [option]);
-  
-  // 清理图表实例
-  useEffect(() => {
-    return () => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.dispose();
-        chartInstanceRef.current = null;
-      }
-    };
-  }, []);
+  }, [option, chartType]);
   
   // 验证错误
   if (chartTypeError) {
