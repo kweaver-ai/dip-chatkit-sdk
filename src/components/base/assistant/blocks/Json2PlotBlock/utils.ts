@@ -178,8 +178,117 @@ export function validateChartType(data: ChartDataSchema, targetType: ChartType):
  * 转换为折线图配置
  */
 function convertToLineOption(data: ChartDataSchema): EChartsOption {
-  const dimension = data.dimensions[0];
-  const xAxisData = data.rows.map(row => formatDate(row[dimension.name]));
+  const firstDimension = data.dimensions[0];
+  const measure = data.measures[0];
+  
+  // 如果有多个维度，使用第二个维度作为系列
+  if (data.dimensions.length > 1) {
+    const secondDimension = data.dimensions[1];
+    
+    // 收集所有唯一的 X 轴值（第一个维度），数据已经是格式化后的，直接使用
+    const xAxisValues = Array.from(new Set(data.rows.map(row => String(row[firstDimension.name])))).sort();
+    
+    // 收集所有唯一的系列值（第二个维度）
+    const seriesValues = Array.from(new Set(data.rows.map(row => String(row[secondDimension.name])))).sort();
+    
+    // 创建数据映射：{ xValue: { seriesValue: measureValue } }
+    const dataMap = new Map<string, Map<string, number>>();
+    data.rows.forEach(row => {
+      const xValue = String(row[firstDimension.name]);
+      const seriesValue = String(row[secondDimension.name]);
+      const measureValue = row[measure.name];
+      
+      if (!dataMap.has(xValue)) {
+        dataMap.set(xValue, new Map());
+      }
+      dataMap.get(xValue)!.set(seriesValue, measureValue);
+    });
+    
+    // 为每个系列创建折线数据
+    const colors = getOptimizedColors(seriesValues.length);
+    const series = seriesValues.map((seriesValue, index) => ({
+      name: seriesValue,
+      type: 'line' as const,
+      smooth: true,
+      lineStyle: { width: 2 },
+      symbol: 'circle',
+      symbolSize: 6,
+      showSymbol: true,
+      data: xAxisValues.map(xValue => {
+        const seriesMap = dataMap.get(xValue);
+        return seriesMap?.get(seriesValue) ?? null;
+      }),
+      itemStyle: {
+        color: colors[index],
+      },
+    }));
+    
+    // 根据系列数量决定图例布局：超过8个时使用垂直布局放在右侧
+    const legendItemCount = seriesValues.length;
+    const useVerticalLegend = legendItemCount > 8;
+    
+    const option: EChartsOption = {
+      color: colors,
+      grid: {
+        left: '10%',
+        right: useVerticalLegend ? '20%' : '15%',
+        top: '10%',
+        bottom: useVerticalLegend ? '10%' : '15%',
+      },
+      tooltip: {
+        trigger: 'axis',
+      },
+      legend: useVerticalLegend
+        ? {
+            data: seriesValues,
+            orient: 'vertical',
+            right: 10,
+            top: 'center',
+            type: 'scroll',
+            pageButtonItemGap: 5,
+            pageButtonGap: 10,
+            pageButtonPosition: 'end',
+            pageFormatter: '{current}/{total}',
+            pageIconColor: '#666',
+            pageIconInactiveColor: '#ccc',
+            pageIconSize: 15,
+            pageTextStyle: {
+              color: '#333',
+            },
+          }
+        : {
+            data: seriesValues,
+            top: 'top',
+            left: 'center',
+            type: 'scroll',
+            pageButtonItemGap: 5,
+            pageButtonGap: 10,
+            pageButtonPosition: 'end',
+            pageFormatter: '{current}/{total}',
+            pageIconColor: '#666',
+            pageIconInactiveColor: '#ccc',
+            pageIconSize: 15,
+            pageTextStyle: {
+              color: '#333',
+            },
+          },
+      xAxis: {
+        type: 'category',
+        data: xAxisValues,
+        name: firstDimension.displayName,
+      },
+      yAxis: {
+        type: 'value',
+        name: measure.displayName,
+      },
+      series,
+    };
+    
+    return option;
+  }
+  
+  // 单维度情况：按 measures 创建系列，数据已经是格式化后的，直接使用
+  const xAxisData = data.rows.map(row => String(row[firstDimension.name]));
   
   const series = data.measures.map(measure => ({
     name: measure.displayName,
@@ -192,28 +301,60 @@ function convertToLineOption(data: ChartDataSchema): EChartsOption {
     data: data.rows.map(row => row[measure.name]),
   }));
   
-  // 获取优化后的颜色数组，确保不同系列颜色差异明显
   const colors = getOptimizedColors(data.measures.length);
+  
+  const legendItemCount = data.measures.length;
+  const useVerticalLegend = legendItemCount > 8;
   
   const option: EChartsOption = {
     color: colors,
     grid: {
       left: '10%',
-      right: '15%',
+      right: useVerticalLegend ? '20%' : '15%',
       top: '10%',
-      bottom: '10%',
+      bottom: useVerticalLegend ? '10%' : '15%',
     },
     tooltip: {
       trigger: 'axis',
     },
-    legend: {
-      data: data.measures.map(m => m.displayName),
-      right: 0,
-    },
+    legend: useVerticalLegend
+      ? {
+          data: data.measures.map(m => m.displayName),
+          orient: 'vertical',
+          right: 10,
+          top: 'center',
+          type: 'scroll',
+          pageButtonItemGap: 5,
+          pageButtonGap: 10,
+          pageButtonPosition: 'end',
+          pageFormatter: '{current}/{total}',
+          pageIconColor: '#666',
+          pageIconInactiveColor: '#ccc',
+          pageIconSize: 15,
+          pageTextStyle: {
+            color: '#333',
+          },
+        }
+      : {
+          data: data.measures.map(m => m.displayName),
+          top: 'top',
+          left: 'center',
+          type: 'scroll',
+          pageButtonItemGap: 5,
+          pageButtonGap: 10,
+          pageButtonPosition: 'end',
+          pageFormatter: '{current}/{total}',
+          pageIconColor: '#666',
+          pageIconInactiveColor: '#ccc',
+          pageIconSize: 15,
+          pageTextStyle: {
+            color: '#333',
+          },
+        },
     xAxis: {
       type: 'category',
       data: xAxisData,
-      name: dimension.displayName,
+      name: firstDimension.displayName,
     },
     yAxis: {
       type: 'value',
@@ -228,13 +369,115 @@ function convertToLineOption(data: ChartDataSchema): EChartsOption {
  * 转换为柱状图配置
  */
 function convertToColumnOption(data: ChartDataSchema): EChartsOption {
-  const dimension = data.dimensions[0];
-  const xAxisData = data.rows.map(row => formatDate(row[dimension.name]));
+  const firstDimension = data.dimensions[0];
+  const measure = data.measures[0];
   
-  // 获取优化后的颜色数组，确保不同系列颜色差异明显
+  // 如果有多个维度，使用第二个维度作为系列
+  if (data.dimensions.length > 1) {
+    const secondDimension = data.dimensions[1];
+    
+    // 收集所有唯一的 X 轴值（第一个维度），数据已经是格式化后的，直接使用
+    const xAxisValues = Array.from(new Set(data.rows.map(row => String(row[firstDimension.name])))).sort();
+    
+    // 收集所有唯一的系列值（第二个维度）
+    const seriesValues = Array.from(new Set(data.rows.map(row => String(row[secondDimension.name])))).sort();
+    
+    // 创建数据映射：{ xValue: { seriesValue: measureValue } }
+    const dataMap = new Map<string, Map<string, number>>();
+    data.rows.forEach(row => {
+      const xValue = String(row[firstDimension.name]);
+      const seriesValue = String(row[secondDimension.name]);
+      const measureValue = row[measure.name];
+      
+      if (!dataMap.has(xValue)) {
+        dataMap.set(xValue, new Map());
+      }
+      dataMap.get(xValue)!.set(seriesValue, measureValue);
+    });
+    
+    // 为每个系列创建柱状数据
+    const colors = getOptimizedColors(seriesValues.length);
+    const series = seriesValues.map((seriesValue, index) => ({
+      name: seriesValue,
+      type: 'bar' as const,
+      barBorderRadius: [4, 4, 0, 0],
+      data: xAxisValues.map(xValue => {
+        const seriesMap = dataMap.get(xValue);
+        return seriesMap?.get(seriesValue) ?? null;
+      }),
+      itemStyle: {
+        color: colors[index],
+      },
+    }));
+    
+    // 根据系列数量决定图例布局：超过8个时使用垂直布局放在右侧
+    const legendItemCount = seriesValues.length;
+    const useVerticalLegend = legendItemCount > 8;
+    
+    const option: EChartsOption = {
+      color: colors,
+      grid: {
+        left: '10%',
+        right: useVerticalLegend ? '20%' : '15%',
+        top: '10%',
+        bottom: useVerticalLegend ? '10%' : '15%',
+      },
+      tooltip: {
+        trigger: 'axis',
+      },
+      legend: useVerticalLegend
+        ? {
+            data: seriesValues,
+            orient: 'vertical',
+            right: 10,
+            top: 'center',
+            type: 'scroll',
+            pageButtonItemGap: 5,
+            pageButtonGap: 10,
+            pageButtonPosition: 'end',
+            pageFormatter: '{current}/{total}',
+            pageIconColor: '#666',
+            pageIconInactiveColor: '#ccc',
+            pageIconSize: 15,
+            pageTextStyle: {
+              color: '#333',
+            },
+          }
+        : {
+            data: seriesValues,
+            top: 'top',
+            left: 'center',
+            type: 'scroll',
+            pageButtonItemGap: 5,
+            pageButtonGap: 10,
+            pageButtonPosition: 'end',
+            pageFormatter: '{current}/{total}',
+            pageIconColor: '#666',
+            pageIconInactiveColor: '#ccc',
+            pageIconSize: 15,
+            pageTextStyle: {
+              color: '#333',
+            },
+          },
+      xAxis: {
+        type: 'category',
+        data: xAxisValues,
+        name: firstDimension.displayName,
+      },
+      yAxis: {
+        type: 'value',
+        name: measure.displayName,
+      },
+      series,
+    };
+    
+    return option;
+  }
+  
+  // 单维度情况：按 measures 创建系列，数据已经是格式化后的，直接使用
+  const xAxisData = data.rows.map(row => String(row[firstDimension.name]));
+  
   const colors = getOptimizedColors(data.measures.length);
-  
-  // 为每个系列显式设置颜色，确保同一系列的所有柱子使用相同颜色
   const series = data.measures.map((measure, index) => ({
     name: measure.displayName,
     type: 'bar' as const,
@@ -246,25 +489,58 @@ function convertToColumnOption(data: ChartDataSchema): EChartsOption {
     },
   }));
   
+  const legendItemCount = data.measures.length;
+  const useVerticalLegend = legendItemCount > 8;
+  
   const option: EChartsOption = {
     color: colors,
     grid: {
       left: '10%',
-      right: '15%',
+      right: useVerticalLegend ? '20%' : '15%',
       top: '10%',
-      bottom: '10%',
+      bottom: useVerticalLegend ? '10%' : '15%',
     },
     tooltip: {
       trigger: 'axis',
     },
-    legend: {
-      data: data.measures.map(m => m.displayName),
-      right: 0,
-    },
+    legend: useVerticalLegend
+      ? {
+          data: data.measures.map(m => m.displayName),
+          orient: 'vertical',
+          right: 10,
+          top: 'center',
+          type: 'scroll',
+          pageButtonItemGap: 5,
+          pageButtonGap: 10,
+          pageButtonPosition: 'end',
+          pageFormatter: '{current}/{total}',
+          pageIconColor: '#666',
+          pageIconInactiveColor: '#ccc',
+          pageIconSize: 15,
+          pageTextStyle: {
+            color: '#333',
+          },
+        }
+      : {
+          data: data.measures.map(m => m.displayName),
+          top: 'top',
+          left: 'center',
+          type: 'scroll',
+          pageButtonItemGap: 5,
+          pageButtonGap: 10,
+          pageButtonPosition: 'end',
+          pageFormatter: '{current}/{total}',
+          pageIconColor: '#666',
+          pageIconInactiveColor: '#ccc',
+          pageIconSize: 15,
+          pageTextStyle: {
+            color: '#333',
+          },
+        },
     xAxis: {
       type: 'category',
       data: xAxisData,
-      name: dimension.displayName,
+      name: firstDimension.displayName,
     },
     yAxis: {
       type: 'value',
@@ -279,16 +555,99 @@ function convertToColumnOption(data: ChartDataSchema): EChartsOption {
  * 转换为饼图配置
  */
 function convertToPieOption(data: ChartDataSchema): EChartsOption {
-  const dimension = data.dimensions[0];
+  const firstDimension = data.dimensions[0];
   const measure = data.measures[0];
   
-  const pieData = data.rows.map(row => ({
-    name: String(row[dimension.name]),
-    value: row[measure.name],
-  }));
+  // 如果有多个维度，使用第二个维度作为饼图数据项，并聚合数值
+  if (data.dimensions.length > 1) {
+    const secondDimension = data.dimensions[1];
+    
+    // 收集所有唯一的系列值（第二个维度）
+    const seriesValues = Array.from(new Set(data.rows.map(row => String(row[secondDimension.name])))).sort();
+    
+    // 创建数据映射：{ seriesValue: totalValue }
+    const dataMap = new Map<string, number>();
+    data.rows.forEach(row => {
+      const seriesValue = String(row[secondDimension.name]);
+      const measureValue = row[measure.name] || 0;
+      
+      const currentValue = dataMap.get(seriesValue) || 0;
+      dataMap.set(seriesValue, currentValue + measureValue);
+    });
+    
+    // 获取优化后的颜色数组，参考柱状图的颜色方案
+    const colors = getOptimizedColors(seriesValues.length);
+    
+    // 为每个系列创建饼图数据
+    const pieData = seriesValues.map((seriesValue, index) => {
+      const value = dataMap.get(seriesValue) || 0;
+      return {
+        name: seriesValue,
+        value,
+        itemStyle: {
+          color: colors[index],
+        },
+      };
+    });
+    
+    const option: EChartsOption = {
+      color: colors,
+      tooltip: {
+        trigger: 'item',
+        formatter: '{a} <br/>{b}: {c} ({d}%)',
+      },
+      legend: {
+        orient: 'vertical',
+        right: 10,
+        top: 'center',
+        type: pieData.length > 10 ? 'scroll' : 'plain',
+        pageButtonItemGap: 5,
+        pageButtonGap: 10,
+        pageButtonPosition: 'end',
+        pageFormatter: '{current}/{total}',
+        pageIconColor: '#666',
+        pageIconInactiveColor: '#ccc',
+        pageIconSize: 15,
+        pageTextStyle: {
+          color: '#333',
+        },
+      },
+      series: [
+        {
+          name: measure.displayName,
+          type: 'pie' as const,
+          radius: '70%',
+          data: pieData,
+          emphasis: {
+            scale: true,
+            scaleSize: 5,
+          },
+          label: {
+            show: true,
+            position: 'outside',
+            formatter: '{b}: {c} ({d}%)',
+          },
+          labelLine: {
+            show: true,
+          },
+        },
+      ],
+    };
+    
+    return option;
+  }
   
-  // 获取优化后的颜色数组，确保相邻区域颜色差异明显
-  const colors = getOptimizedColors(pieData.length);
+  // 单维度情况：使用第一个维度
+  const colors = getOptimizedColors(data.rows.length);
+  
+  // 为每个数据项添加颜色配置
+  const pieData = data.rows.map((row, index) => ({
+    name: String(row[firstDimension.name]),
+    value: row[measure.name],
+    itemStyle: {
+      color: colors[index % colors.length],
+    },
+  }));
   
   const option: EChartsOption = {
     color: colors,
@@ -300,6 +659,17 @@ function convertToPieOption(data: ChartDataSchema): EChartsOption {
       orient: 'vertical',
       right: 10,
       top: 'center',
+      type: pieData.length > 10 ? 'scroll' : 'plain',
+      pageButtonItemGap: 5,
+      pageButtonGap: 10,
+      pageButtonPosition: 'end',
+      pageFormatter: '{current}/{total}',
+      pageIconColor: '#666',
+      pageIconInactiveColor: '#ccc',
+      pageIconSize: 15,
+      pageTextStyle: {
+        color: '#333',
+      },
     },
     series: [
       {
@@ -330,16 +700,99 @@ function convertToPieOption(data: ChartDataSchema): EChartsOption {
  * 转换为环形图配置
  */
 function convertToCircleOption(data: ChartDataSchema): EChartsOption {
-  const dimension = data.dimensions[0];
+  const firstDimension = data.dimensions[0];
   const measure = data.measures[0];
   
-  const pieData = data.rows.map(row => ({
-    name: String(row[dimension.name]),
-    value: row[measure.name],
-  }));
+  // 如果有多个维度，使用第二个维度作为环形图数据项，并聚合数值
+  if (data.dimensions.length > 1) {
+    const secondDimension = data.dimensions[1];
+    
+    // 收集所有唯一的系列值（第二个维度）
+    const seriesValues = Array.from(new Set(data.rows.map(row => String(row[secondDimension.name])))).sort();
+    
+    // 创建数据映射：{ seriesValue: totalValue }
+    const dataMap = new Map<string, number>();
+    data.rows.forEach(row => {
+      const seriesValue = String(row[secondDimension.name]);
+      const measureValue = row[measure.name] || 0;
+      
+      const currentValue = dataMap.get(seriesValue) || 0;
+      dataMap.set(seriesValue, currentValue + measureValue);
+    });
+    
+    // 获取优化后的颜色数组，参考柱状图的颜色方案
+    const colors = getOptimizedColors(seriesValues.length);
+    
+    // 为每个系列创建环形图数据
+    const pieData = seriesValues.map((seriesValue, index) => {
+      const value = dataMap.get(seriesValue) || 0;
+      return {
+        name: seriesValue,
+        value,
+        itemStyle: {
+          color: colors[index],
+        },
+      };
+    });
+    
+    const option: EChartsOption = {
+      color: colors,
+      tooltip: {
+        trigger: 'item',
+        formatter: '{a} <br/>{b}: {c} ({d}%)',
+      },
+      legend: {
+        orient: 'vertical',
+        right: 10,
+        top: 'center',
+        type: pieData.length > 10 ? 'scroll' : 'plain',
+        pageButtonItemGap: 5,
+        pageButtonGap: 10,
+        pageButtonPosition: 'end',
+        pageFormatter: '{current}/{total}',
+        pageIconColor: '#666',
+        pageIconInactiveColor: '#ccc',
+        pageIconSize: 15,
+        pageTextStyle: {
+          color: '#333',
+        },
+      },
+      series: [
+        {
+          name: measure.displayName,
+          type: 'pie' as const,
+          radius: ['40%', '70%'],
+          data: pieData,
+          emphasis: {
+            scale: true,
+            scaleSize: 5,
+          },
+          label: {
+            show: true,
+            position: 'outside',
+            formatter: '{b}: {c} ({d}%)',
+          },
+          labelLine: {
+            show: true,
+          },
+        },
+      ],
+    };
+    
+    return option;
+  }
   
-  // 获取优化后的颜色数组，确保相邻区域颜色差异明显
-  const colors = getOptimizedColors(pieData.length);
+  // 单维度情况：使用第一个维度
+  const colors = getOptimizedColors(data.rows.length);
+  
+  // 为每个数据项添加颜色配置
+  const pieData = data.rows.map((row, index) => ({
+    name: String(row[firstDimension.name]),
+    value: row[measure.name],
+    itemStyle: {
+      color: colors[index % colors.length],
+    },
+  }));
   
   const option: EChartsOption = {
     color: colors,
@@ -351,6 +804,17 @@ function convertToCircleOption(data: ChartDataSchema): EChartsOption {
       orient: 'vertical',
       right: 10,
       top: 'center',
+      type: pieData.length > 10 ? 'scroll' : 'plain',
+      pageButtonItemGap: 5,
+      pageButtonGap: 10,
+      pageButtonPosition: 'end',
+      pageFormatter: '{current}/{total}',
+      pageIconColor: '#666',
+      pageIconInactiveColor: '#ccc',
+      pageIconSize: 15,
+      pageTextStyle: {
+        color: '#333',
+      },
     },
     series: [
       {
