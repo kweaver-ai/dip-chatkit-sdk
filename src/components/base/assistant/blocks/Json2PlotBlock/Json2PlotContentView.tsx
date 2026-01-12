@@ -218,7 +218,7 @@ const Json2PlotContentView: React.FC<Json2PlotContentViewProps> = ({
             {chartTypeError}
           </div>
         ) : (
-          <div style={chartContainerStyle}>
+          <div style={chartContainerStyle} key={currentChartType}>
             <EChartsView
               data={data}
               chartType={currentChartType}
