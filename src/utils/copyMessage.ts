@@ -125,34 +125,34 @@ export const extractMarkdownContent = (message: ChatMessage): string => {
             }
             
             // 处理 input（可能是字符串或其他类型）
-            if (toolContent?.input !== undefined && toolContent.input !== null) {
-              try {
-                if (typeof toolContent.input === 'string') {
-                  text += `**输入：**\n\n\`\`\`\n${toolContent.input}\n\`\`\`\n\n`
-                } else {
-                  text += `**输入：**\n\n\`\`\`json\n${JSON.stringify(toolContent.input, null, 2)}\n\`\`\`\n\n`
-                }
-              } catch (err) {
-                // JSON.stringify 失败时跳过 input
-                console.warn('工具 input 处理失败:', err)
-              }
-            }
+            // if (toolContent?.input !== undefined && toolContent.input !== null) {
+            //   try {
+            //     if (typeof toolContent.input === 'string') {
+            //       text += `**输入：**\n\n\`\`\`\n${toolContent.input}\n\`\`\`\n\n`
+            //     } else {
+            //       text += `**输入：**\n\n\`\`\`json\n${JSON.stringify(toolContent.input, null, 2)}\n\`\`\`\n\n`
+            //     }
+            //   } catch (err) {
+            //     // JSON.stringify 失败时跳过 input
+            //     console.warn('工具 input 处理失败:', err)
+            //   }
+            // }
             
             // 处理 output（可能是字符串、对象或其他类型）
             if (toolContent?.output !== undefined && toolContent.output !== null) {
               try {
                 if (typeof toolContent.output === 'string') {
-                  text += `**输出：**\n\n${toolContent.output}`
+                  text += `\`\`\`\n${toolContent.output}\n\`\`\``
                 } else if (toolContent.output && typeof toolContent.output === 'object') {
                   // 如果是对象，优先提取 data 数组，否则序列化整个对象
                   if (Array.isArray(toolContent.output.data)) {
-                    text += `**输出：**\n\n\`\`\`json\n${JSON.stringify(toolContent.output.data, null, 2)}\n\`\`\``
+                    text += `\`\`\`json\n${JSON.stringify(toolContent.output.data, null, 2)}\n\`\`\``
                   } else {
-                    text += `**输出：**\n\n\`\`\`json\n${JSON.stringify(toolContent.output, null, 2)}\n\`\`\``
+                    text += `\`\`\`json\n${JSON.stringify(toolContent.output, null, 2)}\n\`\`\``
                   }
                 } else {
                   // 其他类型，转为字符串
-                  text += `**输出：**\n\n${String(toolContent.output)}`
+                  text += `\n\n${String(toolContent.output)}`
                 }
               } catch (err) {
                 // output 处理失败时跳过
@@ -181,14 +181,15 @@ export const extractMarkdownContent = (message: ChatMessage): string => {
 export const extractTextContent = (markdown: string): string => {
   // 简单去除 Markdown 标记，转换为纯文本
   return markdown
-    .replace(/```[\s\S]*?```/g, '') // 移除代码块
-    .replace(/`([^`]+)`/g, '$1') // 移除行内代码
-    .replace(/#{1,6}\s+/g, '') // 移除标题标记
-    .replace(/\*\*([^*]+)\*\*/g, '$1') // 移除粗体
-    .replace(/\*([^*]+)\*/g, '$1') // 移除斜体
-    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // 移除链接
-    .replace(/^\s*[-*+]\s+/gm, '') // 移除列表标记
-    .replace(/^\s*\d+\.\s+/gm, '') // 移除有序列表标记
+    // .replace(/```[\s\S]*?```/g, '') // 移除代码块
+    // .replace(/`([^`]+)`/g, '$1') // 移除行内代码
+    // .replace(/#{1,6}\s+/g, '') // 移除标题标记
+    // .replace(/\*\*([^*]+)\*\*/g, '$1') // 移除粗体
+    // .replace(/\*([^*]+)\*/g, '$1') // 移除斜体
+    // .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // 移除链接
+    // .replace(/^\s*[-*+]\s+/gm, '') // 移除列表标记
+    // .replace(/^\s*\d+\.\s+/gm, '') // 移除有序列表标记
+    .replace(/<!--[\s\S]*?-->/g, '') // 移除 HTML 注释
     .trim()
 }
 
