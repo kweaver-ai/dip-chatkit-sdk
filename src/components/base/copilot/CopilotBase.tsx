@@ -1,8 +1,15 @@
-import { ChatKitBase, ChatKitBaseProps } from '../ChatKitBase';
+import { ChatKitBase, ChatKitBaseProps, ChatKitBaseState } from '../ChatKitBase';
 import MessageList from './MessageList';
 import InputArea from './InputArea';
 import Header from './Header';
 import Prologue from './Prologue';
+
+/**
+ * CopilotBase 组件的状态接口
+ * 扩展 ChatKitBaseState（当前不需要额外状态，保留接口以便未来扩展）
+ */
+export interface CopilotBaseState extends ChatKitBaseState {
+}
 
 /**
  * CopilotBase 基础组件
@@ -12,6 +19,36 @@ import Prologue from './Prologue';
  * 区别于 AssistantBase，CopilotBase 在 render() 函数中渲染 Copilot 模式的界面
  */
 export abstract class CopilotBase<P extends ChatKitBaseProps = ChatKitBaseProps> extends ChatKitBase<P> {
+  /**
+   * 组件状态，包含历史对话显示状态
+   */
+  declare state: CopilotBaseState;
+
+  /**
+   * 处理加载指定会话
+   */
+  handleLoadConversation = async (conversationId: string) => {
+    try {
+      await this.loadConversation(conversationId);
+    } catch (error) {
+      console.error('加载会话失败:', error);
+      // 可以在这里添加错误提示
+    }
+  };
+
+  /**
+   * 处理删除指定会话
+   */
+  handleDeleteConversation = async (conversationId: string) => {
+    await this.deleteConversation(conversationId);
+  };
+
+  /**
+   * 处理获取历史会话列表
+   */
+  handleGetConversations = async (page?: number, size?: number) => {
+    return await this.getConversations(page, size);
+  };
   /**
    * 实现 React.Component.render() 方法
    * 渲染 Copilot 模式的界面
@@ -27,50 +64,58 @@ export abstract class CopilotBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     const isStreaming = streamingMessageId !== null;
 
     return (
-      <div className="flex flex-col h-full w-full bg-white shadow-2xl">
-        {/* 头部 */}
-        <Header
-          title={title}
-          onClose={onClose}
-          onNewChat={this.createConversation}
-        />
+      <>
+        <div className="flex flex-col h-full w-full bg-white shadow-2xl">
+          {/* 头部 */}
+          <Header
+            title={title}
+            onClose={onClose}
+            onNewChat={this.createConversation}
+            onGetConversations={this.handleGetConversations}
+            onLoadConversation={this.handleLoadConversation}
+            onDeleteConversation={this.handleDeleteConversation}
+          />
 
-        {/* 消息列表区域或欢迎界面 */}
-        <div className="flex-1 overflow-y-auto">
-          {showPrologue ? (
-            isLoadingOnboarding ? (
-              // 加载中，显示加载提示
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
-                  <p className="text-sm text-gray-500">正在加载...</p>
+          {/* 消息列表区域或欢迎界面 */}
+          <div className="flex-1 overflow-y-auto">
+            {showPrologue ? (
+              isLoadingOnboarding ? (
+                // 加载中，显示加载提示
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+                    <p className="text-sm text-gray-500">正在加载...</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                // 加载完成，显示开场白
+                <Prologue
+                  onQuestionClick={this.handleQuestionClick}
+                  prologue={onboardingInfo?.prologue}
+                  predefinedQuestions={onboardingInfo?.predefinedQuestions}
+                />
+              )
             ) : (
-              // 加载完成，显示开场白
-              <Prologue
-                onQuestionClick={this.handleQuestionClick}
-                prologue={onboardingInfo?.prologue}
-                predefinedQuestions={onboardingInfo?.predefinedQuestions}
-              />
-            )
-          ) : (
-            <MessageList messages={messages} streamingMessageId={streamingMessageId} />
-          )}
+              <MessageList messages={messages} streamingMessageId={streamingMessageId} />
+            )}
+          </div>
+
+          {/* 输入区域 */}
+          <InputArea
+            value={textInput}
+            onChange={this.setTextInput}
+            onSend={this.handleSend}
+            context={applicationContext}
+            onRemoveContext={this.removeApplicationContext}
+            disabled={isSending}
+            isStreaming={isStreaming}
+            onStop={this.handleStop}
+          />
         </div>
 
-        {/* 输入区域 */}
-        <InputArea
-          value={textInput}
-          onChange={this.setTextInput}
-          onSend={this.handleSend}
-          context={applicationContext}
-          onRemoveContext={this.removeApplicationContext}
-          disabled={isSending}
-          isStreaming={isStreaming}
-          onStop={this.handleStop}
-        />
-      </div>
+        {/* 历史会话列表组件（包含按钮和下拉菜单） */}
+
+      </>
     );
   }
 }

@@ -1,11 +1,14 @@
 import React from 'react'
 import {
   AssistantIcon,
-  MoreIcon,
   NewIcon,
   ExpandIcon,
   CloseIcon,
 } from '../../icons'
+import ConversationHistory from './ConversationHistory'
+import {
+  ConversationHistory as ConversationHistoryType,
+} from '../../../types'
 
 /**
  * Header 组件的属性接口
@@ -23,8 +26,13 @@ interface HeaderProps {
   /** 展开/收起的回调函数 */
   onExpand?: () => void
 
-  /** 更多选项的回调函数 */
-  onMore?: () => void
+  /** 获取历史会话列表的回调函数 */
+  onGetConversations?: (page?: number, size?: number) => Promise<ConversationHistoryType[]>;
+  /** 加载指定会话的回调函数 */
+  onLoadConversation?: (conversationId: string) => void;
+  /** 删除指定会话的回调函数 */
+  onDeleteConversation?: (conversationId: string) => Promise<void>;
+
 }
 
 /**
@@ -36,7 +44,9 @@ const Header: React.FC<HeaderProps> = ({
   onClose,
   onNewChat,
   onExpand,
-  onMore,
+  onGetConversations,
+  onLoadConversation,
+  onDeleteConversation,
 }) => {
   return (
     <div className="relative h-14 w-full bg-white">
@@ -58,19 +68,18 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* 操作按钮组 - 从右到左：Close -> Expand -> New Chat -> More */}
+        {/* 操作按钮组 - 从右到左：Close -> Expand -> New Chat -> History */}
         <div className="absolute right-0 top-0 h-8 flex items-center">
-          {/* 更多按钮 */}
-          {onMore && (
-            <button
-              onClick={onMore}
-              className="w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
-              title="更多选项"
-            >
-              <MoreIcon className="w-5 h-5" />
-            </button>
+          {/* 历史记录按钮 */}
+          {onGetConversations && onLoadConversation && onDeleteConversation && (
+            <div className="relative">
+              <ConversationHistory
+                onGetConversations={onGetConversations}
+                onLoadConversation={onLoadConversation}
+                onDeleteConversation={onDeleteConversation}
+              />
+            </div>
           )}
-
           {/* 新建对话按钮 */}
           {onNewChat && (
             <button
