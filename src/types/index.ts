@@ -287,6 +287,10 @@ export interface ChatKitInterface {
    * 向后端发送消息
    * 该方法需要由开发者实现，以适配扣子、Dify等 LLMOps 平台的接口
    * 发送成功后，返回发送的消息结构
+   * @param text 发送给后端的用户输入的文本
+   * @param ctx 随用户输入文本一起发送的应用上下文
+   * @param conversationID 发送的对话消息所属的会话 ID
+   * @param regenerateMessageId 需要重新生成的助手消息 ID（可选，用于重新生成功能）
    * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
    * @param text 发送给后端的用户输入的文本
    * @param ctx 随用户输入文本一起发送的应用上下文
@@ -296,7 +300,8 @@ export interface ChatKitInterface {
   sendMessage(
     text: string,
     ctx: ApplicationContext,
-    conversationID?: string
+    conversationID?: string,
+    regenerateMessageId?: string
   ): Promise<ChatMessage>;
 
   /**

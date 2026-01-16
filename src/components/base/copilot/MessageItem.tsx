@@ -3,6 +3,7 @@ import { ChatMessage, RoleType, BlockType } from '../../../types'
 import { TextBlock, MarkdownBlock, WebSearchBlock, ToolBlock } from './blocks'
 import { AssistantIcon, CopyIcon } from '../../icons'
 import { copyMessageContent } from '../../../utils/copyMessage'
+import RegenerateButton from './RegenerateButton'
 
 /**
  * MessageItem 组件的属性接口
@@ -12,6 +13,8 @@ interface MessageItemProps {
   message: ChatMessage
   /** 是否正在流式更新 */
   isStreaming?: boolean
+  /** 重新生成回调函数 */
+  onRegenerate?: (messageId: string) => Promise<void>
 }
 
 /**
@@ -21,6 +24,7 @@ interface MessageItemProps {
 const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isStreaming = false,
+  onRegenerate,
 }) => {
   const isUser = message.role.type === RoleType.USER
   const [copySuccess, setCopySuccess] = useState(false)
@@ -141,15 +145,18 @@ const MessageItem: React.FC<MessageItemProps> = ({
           {renderContentBlocks()}
         </div>
 
-        {/* 复制按钮 */}
+        {/* 复制按钮和重新生成按钮 */}
         {!isStreaming && hasContent() && (
           <div
-            className={`flex ${isUser ? 'justify-end' : 'justify-start'} ${
+            className={`flex items-center gap-2 ${isUser ? 'justify-end' : 'justify-start'} ${
               isUser
                 ? 'opacity-0 group-hover:opacity-100 transition-opacity'
                 : ''
             }`}
           >
+           
+            
+            {/* 复制按钮 */}
             <button
               onClick={async () => {
                 const success = await copyMessageContent(message)
@@ -167,6 +174,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 }`}
               />
             </button>
+
+             {/* 重新生成按钮（仅助手消息） */}
+             {!isUser && onRegenerate && (
+              <RegenerateButton
+                messageId={message.messageId}
+                onRegenerate={onRegenerate}
+                disabled={isStreaming}
+              />
+            )}
           </div>
         )}
       </div>
