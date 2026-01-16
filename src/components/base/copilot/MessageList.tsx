@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { ChatMessage } from '../../../types';
+import { ChatMessage, RoleType } from '../../../types';
 import MessageItem from './MessageItem';
 
 /**
@@ -10,13 +10,15 @@ interface MessageListProps {
   messages: ChatMessage[];
   /** 当前正在流式更新的消息 ID */
   streamingMessageId?: string | null;
+  /** 重新生成回调函数 */
+  onRegenerate?: (messageId: string, previousUserMessage: ChatMessage) => Promise<void>;
 }
 
 /**
  * MessageList 组件
  * 显示对话消息列表
  */
-const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId, onRegenerate }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -30,13 +32,41 @@ const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId 
     scrollToBottom();
   }, [messages]);
 
+  /**
+   * 查找上一条用户消息
+   */
+  const findPreviousUserMessage = (currentIndex: number): ChatMessage | null => {
+    for (let i = currentIndex - 1; i >= 0; i--) {
+      if (messages[i].role.type === RoleType.USER) {
+        return messages[i];
+      }
+    }
+    return null;
+  };
+
+  /**
+   * 处理重新生成
+   */
+  const handleRegenerate = async (messageId: string, currentIndex: number) => {
+    if (!onRegenerate) return;
+    
+    const previousUserMessage = findPreviousUserMessage(currentIndex);
+    if (!previousUserMessage) {
+      console.warn('未找到上一条用户消息');
+      return;
+    }
+
+    await onRegenerate(messageId, previousUserMessage);
+  };
+
   return (
     <div className="px-5 py-3">
-      {messages.map((message) => (
+      {messages.map((message, index) => (
         <MessageItem 
           key={message.messageId} 
           message={message} 
           isStreaming={message.messageId === streamingMessageId}
+          onRegenerate={onRegenerate ? (messageId) => handleRegenerate(messageId, index) : undefined}
         />
       ))}
       <div ref={messagesEndRef} />

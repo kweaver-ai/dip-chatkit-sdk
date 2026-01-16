@@ -17,3 +17,4 @@ export { MoreIcon } from './MoreIcon';
 export { NewIcon } from './NewIcon';
 export { ExpandIcon } from './ExpandIcon';
 export { CopyIcon } from './CopyIcon';
+export { RefreshIcon } from './RefreshIcon';

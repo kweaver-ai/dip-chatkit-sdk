@@ -10,6 +10,7 @@ import {
 import Avatar from '@/components/Avatar'
 import { AssistantIcon, CopyIcon } from '../../icons'
 import { copyMessageContent } from '../../../utils/copyMessage'
+import RegenerateButton from './RegenerateButton'
 
 /**
  * MessageItem 组件的属性接口
@@ -21,6 +22,8 @@ interface MessageItemProps {
   isStreaming?: boolean
   /** 助手信息 */
   agentAvatar?: string
+  /** 重新生成回调函数 */
+  onRegenerate?: (messageId: string) => Promise<void>
 }
 
 /**
@@ -31,6 +34,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isStreaming = false,
   agentAvatar,
+  onRegenerate,
 }) => {
   const isUser = message.role.type === RoleType.USER
   const [copySuccess, setCopySuccess] = useState(false)
@@ -168,15 +172,18 @@ const MessageItem: React.FC<MessageItemProps> = ({
           {renderContentBlocks()}
         </div>
 
-        {/* 复制按钮 */}
+        {/* 复制按钮和重新生成按钮 */}
         {!isStreaming && hasContent() && (
           <div
-            className={`flex ${isUser ? 'justify-end' : 'justify-start'} ${
+            className={`flex items-center gap-2 ${isUser ? 'justify-end' : 'justify-start'} ${
               isUser
                 ? 'opacity-0 group-hover:opacity-100 transition-opacity'
                 : ''
             }`}
           >
+         
+            
+            {/* 复制按钮 */}
             <button
               onClick={handleCopy}
               className="flex items-center justify-center w-[24px] h-[24px] rounded hover:bg-[rgba(0,0,0,0.05)]"
@@ -188,6 +195,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 }`}
               />
             </button>
+               {/* 重新生成按钮（仅助手消息） */}
+               {!isUser && onRegenerate && (
+              <RegenerateButton
+                messageId={message.messageId}
+                onRegenerate={onRegenerate}
+                disabled={isStreaming}
+              />
+            )}
           </div>
         )}
       </div>

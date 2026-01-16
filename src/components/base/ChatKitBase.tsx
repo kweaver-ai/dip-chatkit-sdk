@@ -190,7 +190,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param conversationID 发送的对话消息所属的会话 ID
    * @returns 返回发送的消息结构
    */
-  public abstract sendMessage(text: string, ctx: ApplicationContext, conversationID?: string): Promise<ChatMessage>;
+  public abstract sendMessage(text: string, ctx: ApplicationContext, conversationID?: string, regenerateMessageId?: string): Promise<ChatMessage>;
 
   /**
    * 将 API 接口返回的 EventStream 增量解析成完整的 AssistantMessage 对象 (抽象方法，由子类实现)
@@ -560,7 +560,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param conversationID 发送的对话消息所属的会话 ID（可选）
    * @returns 返回发送的消息结构
    */
-  public send = async (text: string, ctx?: ApplicationContext, conversationID?: string): Promise<ChatMessage> => {
+  public send = async (text: string, ctx?: ApplicationContext, conversationID?: string, regenerateMessageId?: string): Promise<ChatMessage> => {
     if (!text.trim()) {
       throw new Error('消息内容不能为空');
     }
@@ -591,34 +591,41 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     // 获取最终使用的上下文
     const finalContext = ctx || this.state.applicationContext || this.props.defaultApplicationContext || { title: '', data: {} };
 
-    // 创建用户消息
-    const userMessage: ChatMessage = {
-      messageId: `user-${Date.now()}`,
-      content: [
-        {
-          type: BlockType.TEXT,
-          content: text,
+    // **重要：重新生成时不创建用户消息**
+    // 只有当 regenerateMessageId 不存在时，才创建并插入用户消息
+    if (!regenerateMessageId) {
+      // 创建用户消息
+      const userMessage: ChatMessage = {
+        messageId: `user-${Date.now()}`,
+        content: [
+          {
+            type: BlockType.TEXT,
+            content: text,
+          },
+        ],
+        role: {
+          name: '用户',
+          type: RoleType.USER,
+          avatar: '',
         },
-      ],
-      role: {
-        name: '用户',
-        type: RoleType.USER,
-        avatar: '',
-      },
-      // 如果有应用上下文，则附加到用户消息中
-      applicationContext: finalContext.title || finalContext.data ? finalContext : undefined,
-    };
+        // 如果有应用上下文，则附加到用户消息中
+        applicationContext: finalContext.title || finalContext.data ? finalContext : undefined,
+      };
 
-    // 将用户消息添加到消息列表
-    this.setState((prevState) => ({
-      messages: [...prevState.messages, userMessage],
-    }));
+      // 将用户消息添加到消息列表
+      this.setState((prevState) => ({
+        messages: [...prevState.messages, userMessage],
+      }));
+    }
 
     try {
-      this.setState({ textInput: '' });
+      // 如果不是重新生成，则清空输入框
+      if (!regenerateMessageId) {
+        this.setState({ textInput: '' });
+      }
       
-      // 调用子类实现的 sendMessage 方法，传入 conversationID
-      const assistantMessage = await this.sendMessage(text, finalContext, currentConversationID);
+      // 调用子类实现的 sendMessage 方法，传入 conversationID 和 regenerateMessageId
+      const assistantMessage = await this.sendMessage(text, finalContext, currentConversationID, regenerateMessageId);
 
       // 流式响应时,子类已经添加并更新了消息,这里只需要清理状态
       this.setState({
