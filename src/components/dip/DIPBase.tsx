@@ -307,9 +307,10 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
      * @param text 用户输入
      * @param ctx 应用上下文
      * @param conversationID 发送的对话消息所属的会话 ID
+     * @param regenerateMessageId 需要重新生成的助手消息 ID（可选，用于重新生成功能）
      * @returns 返回助手消息
      */
-    public async sendMessage(text: string, ctx: ApplicationContext, conversationID?: string): Promise<ChatMessage> {
+    public async sendMessage(text: string, ctx: ApplicationContext, conversationID?: string, regenerateMessageId?: string): Promise<ChatMessage> {
       if (!this.dipBaseUrl) {
         throw new Error('DIP baseUrl 不能为空');
       }
@@ -321,7 +322,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       }
 
       // 构造请求体
-      const body = {
+      const body: any = {
         agent_id: this.agentInfo.id,
         agent_version: this.dipVersion,
         executor_version: this.dipExecutorVersion,
@@ -336,8 +337,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
           enable_dependency_cache: true,
         },
         inc_stream: true,
-
       };
+
+      // 如果是重新生成，添加 regenerate_assistant_message_id 参数
+      if (regenerateMessageId) {
+        body.regenerate_assistant_message_id = regenerateMessageId;
+      }
 
       // 使用 executeDataAgentWithTokenRefresh 包装 API 调用
       const response = await this.executeDataAgentWithTokenRefresh(async () => {
@@ -365,7 +370,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         return res;
       });
 
-      const assistantMessageId = `assistant-${Date.now()}`;
+      // 如果是重新生成，使用现有的消息 ID；否则创建新的消息 ID
+      const assistantMessageId = regenerateMessageId || `assistant-${Date.now()}`;
       const initialAssistantMessage: ChatMessage = {
         messageId: assistantMessageId,
         content: [],
@@ -377,10 +383,27 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       };
 
       // 使用 any 类型断言来访问 setState 方法
-      (this as any).setState((prevState: any) => ({
-        messages: [...prevState.messages, initialAssistantMessage],
-        streamingMessageId: assistantMessageId,
-      }));
+      if (regenerateMessageId) {
+        // 重新生成：更新现有消息
+        (this as any).setState((prevState: any) => {
+          const messages = prevState.messages.map((msg: ChatMessage) => {
+            if (msg.messageId === regenerateMessageId) {
+              return initialAssistantMessage;
+            }
+            return msg;
+          });
+          return {
+            messages,
+            streamingMessageId: assistantMessageId,
+          };
+        });
+      } else {
+        // 新建消息：添加到消息列表
+        (this as any).setState((prevState: any) => ({
+          messages: [...prevState.messages, initialAssistantMessage],
+          streamingMessageId: assistantMessageId,
+        }));
+      }
 
       const reader = response.body?.getReader();
       if (!reader) {
@@ -391,7 +414,9 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       await (this as any).handleStreamResponse(reader, assistantMessageId);
 
       // 从 state 中获取最终更新后的消息
-      const finalMessage = (this as any).state.messages.find((msg: any) => msg.messageId === assistantMessageId);
+      // 优先使用 streamingMessageId（可能已被 assistant_message_id 更新），否则使用初始的 assistantMessageId
+      const currentStreamingMessageId = (this as any).state.streamingMessageId || assistantMessageId;
+      const finalMessage = (this as any).state.messages.find((msg: any) => msg.messageId === currentStreamingMessageId);
 
       return finalMessage || initialAssistantMessage;
     }
@@ -399,6 +424,16 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
   /**
    * 将 API 接口返回的 EventStream 增量解析成完整的 AssistantMessage 对象
    * 根据设计文档实现白名单机制和 JSONPath 处理
+   * 
+   * 处理流程（符合文档流程图）：
+   * 1. 解析 EventMessage
+   * 2. 检查 AssistantMessage 实例是否已经存在
+   * 3. 如果不存在且 key 包含 assistant_message，则初始化 AssistantMessage 对象
+   * 4. 检查 action 和 JSONPath 是否在白名单中
+   * 5. 如果在白名单中，根据 action 处理 content 并执行后处理
+   * 6. 处理完成后，检查 AssistantMessage.message.id 并同步更新 ChatMessage.messageId
+   *    保证 AssistantMessage.id 和 ChatMessage.messageId 保持一致
+   * 
    * @param eventMessage 接收到的一条 Event Message
    * @param prev 上一次增量更新后的 AssistantMessage 对象
    * @param messageId 当前正在更新的消息 ID
@@ -416,29 +451,100 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         return prev;
       }
 
+      // 检查 key 是否包含 assistant_message，如果包含且 AssistantMessage 实例不存在，则初始化
+      // 根据文档流程图：如果 key 包含 assistant_message，且 AssistantMessage 实例不存在，则初始化
+      const key = em.key || [];
+      const hasAssistantMessage = key.some(k => 
+        typeof k === 'string' && (k === 'assistant_message' || k.startsWith('assistant_message'))
+      );
+      
+      // 初始化 AssistantMessage 对象（如果不存在）
+      let assistantMessage: AssistantMessage;
+      if (hasAssistantMessage && (!prev || Object.keys(prev as any).length === 0)) {
+        console.log('初始化 AssistantMessage 对象，key:', key);
+        assistantMessage = {};
+      } else {
+        // 克隆 prev 对象以避免直接修改
+        assistantMessage = JSON.parse(JSON.stringify(prev || {}));
+      }
+
       // 检查是否在白名单中
-      const jsonPath = this.keyToJSONPath(em.key || []);
+      const jsonPath = this.keyToJSONPath(key);
       const whitelistEntry = this.getWhitelistEntry(em.action || '', jsonPath);
 
       if (!whitelistEntry) {
-        // 不在白名单中，跳过
+        // 不在白名单中，跳过处理，但仍需检查并同步更新 messageId
         console.log('跳过非白名单事件:', em.action, jsonPath);
-        return prev;
+        
+        // 即使不在白名单中，也要保证 AssistantMessage.message.id 和 ChatMessage.messageId 保持一致
+        // 注意：这里需要先处理 content，因为可能更新了 assistantMessage.message.id
+        const processedAssistantMessage = em.action === 'upsert' 
+          ? this.applyUpsert(assistantMessage, key, em.content)
+          : em.action === 'append'
+          ? this.applyAppend(assistantMessage, key, em.content)
+          : assistantMessage;
+        
+        const assistantMessageId = processedAssistantMessage.message?.id;
+        if (assistantMessageId && assistantMessageId !== messageId) {
+          console.log('同步更新消息 ID（白名单外）:', messageId, '->', assistantMessageId);
+          (this as any).setState((prevState: any) => {
+            const messages = prevState.messages.map((msg: ChatMessage) => {
+              if (msg.messageId === messageId) {
+                return {
+                  ...msg,
+                  messageId: assistantMessageId,
+                };
+              }
+              return msg;
+            });
+            return {
+              messages,
+              streamingMessageId: assistantMessageId,
+            };
+          });
+        }
+        
+        return processedAssistantMessage as K;
       }
-
-      // 克隆 prev 对象以避免直接修改
-      let assistantMessage: AssistantMessage = JSON.parse(JSON.stringify(prev || {}));
 
       // 根据 action 处理 content
       if (em.action === 'upsert') {
-        assistantMessage = this.applyUpsert(assistantMessage, em.key || [], em.content);
+        assistantMessage = this.applyUpsert(assistantMessage, key, em.content);
       } else if (em.action === 'append') {
-        assistantMessage = this.applyAppend(assistantMessage, em.key || [], em.content);
+        assistantMessage = this.applyAppend(assistantMessage, key, em.content);
       }
 
-      // 执行后处理，传入 messageId
+      // 保证 AssistantMessage.message.id 和 ChatMessage.messageId 保持一致
+      // 在处理完 AssistantMessage 后，检查并同步更新 ChatMessage.messageId
+      // 优先使用 AssistantMessage.message.id，确保后续 postProcess 使用正确的 messageId
+      const assistantMessageId = assistantMessage.message?.id;
+      let currentMessageId = messageId;
+      
+      if (assistantMessageId && assistantMessageId !== messageId) {
+        console.log('同步更新消息 ID，保持 AssistantMessage.id 和 ChatMessage.messageId 一致:', messageId, '->', assistantMessageId);
+        currentMessageId = assistantMessageId; // 使用新的 messageId
+        // 更新 state 中的消息 ID 和 streamingMessageId
+        (this as any).setState((prevState: any) => {
+          const messages = prevState.messages.map((msg: ChatMessage) => {
+            if (msg.messageId === messageId) {
+              return {
+                ...msg,
+                messageId: assistantMessageId,
+              };
+            }
+            return msg;
+          });
+          return {
+            messages,
+            streamingMessageId: assistantMessageId,
+          };
+        });
+      }
+
+      // 执行后处理，使用更新后的 messageId（优先使用 AssistantMessage.message.id）
+      // 这样可以确保 append*Block 方法能找到正确的消息
       if (whitelistEntry.postProcess) {
-        whitelistEntry.postProcess(assistantMessage, em.content, messageId);
+        whitelistEntry.postProcess(assistantMessage, em.content, currentMessageId);
       }
 
       return assistantMessage as K;
@@ -507,6 +613,9 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     } = {
       'upsert:error': {},
       'upsert:message': {},
+      // 注意：upsert:assistant_message_id 的处理已移除
+      // 现在通过检查 AssistantMessage.message.id 来同步更新 ChatMessage.messageId
+      // 这样可以保证 AssistantMessage.id 和 ChatMessage.messageId 保持一致
       'append:message.content.middle_answer.progress': {
         postProcess: (_assistantMessage, content, messageId) => {
           // content 是一个 Progress 对象

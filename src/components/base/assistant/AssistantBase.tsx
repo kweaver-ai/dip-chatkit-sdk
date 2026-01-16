@@ -4,6 +4,7 @@ import InputArea from './InputArea';
 import Prologue from './Prologue';
 import ConversationHistory from './ConversationHistory';
 import { MoreIcon, NewIcon } from '@/components/icons';
+import { ChatMessage, BlockType } from '../../../types';
 
 /**
  * AssistantBase 组件的属性接口
@@ -93,6 +94,56 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
   };
 
   /**
+   * 从用户消息中提取文本内容
+   * @param message 用户消息
+   * @returns 提取的文本内容
+   */
+  private extractUserMessageText(message: ChatMessage): string {
+    if (Array.isArray(message.content)) {
+      // 查找 TEXT 或 MARKDOWN 类型的块
+      const textBlock = message.content.find(
+        (block) => block.type === BlockType.TEXT || block.type === BlockType.MARKDOWN
+      );
+      if (textBlock) {
+        return textBlock.content as string;
+      }
+    }
+    
+    // 向后兼容：如果 content 是字符串
+    if (typeof message.content === 'string') {
+      return message.content;
+    }
+
+    return '';
+  }
+
+  /**
+   * 处理重新生成
+   * @param messageId 需要重新生成的助手消息 ID
+   * @param previousUserMessage 上一条用户消息
+   */
+  handleRegenerate = async (messageId: string, previousUserMessage: ChatMessage): Promise<void> => {
+    try {
+      // 提取用户消息的文本和上下文
+      const userText = this.extractUserMessageText(previousUserMessage);
+      const userContext = previousUserMessage.applicationContext;
+
+      // 调用 send 方法，传递 regenerateMessageId
+      // 注意：send 方法内部会检测 regenerateMessageId 参数
+      // 如果存在，将跳过创建用户消息的步骤，只重新生成助手消息
+      await this.send(
+        userText,
+        userContext,
+        this.state.conversationID,
+        messageId  // 传递需要重新生成的消息 ID
+      );
+    } catch (error) {
+      console.error('重新生成失败:', error);
+      throw error;
+    }
+  };
+
+  /**
    * 实现 React.Component.render() 方法
    * 渲染 Assistant 模式的界面
    */
@@ -132,7 +183,12 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
                   />
                 )
               ) : (
-                <MessageList messages={messages} streamingMessageId={streamingMessageId} agentAvatar={(this as any).agentInfo?.avatar} />
+                <MessageList 
+                  messages={messages} 
+                  streamingMessageId={streamingMessageId} 
+                  agentAvatar={(this as any).agentInfo?.avatar}
+                  onRegenerate={this.handleRegenerate}
+                />
               )}
             </div>
 
