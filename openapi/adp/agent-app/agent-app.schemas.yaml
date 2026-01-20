@@ -161,8 +161,52 @@ components:
         answer:
           oneOf:
             - $ref: '#/components/schemas/ExecuteCodeResult'
+            - $ref: '#/components/schemas/AfSailorResult'
         skill_info:
           $ref: "#/components/schemas/SkillInfo"
+        interrupted:
+          type: boolean
+          description: 是否中断
+        flags:
+          type: string
+          description: 标志位
+        end_time:
+          type: number
+          format: float
+          description: 结束时间戳
+        estimated_output_tokens:
+          type: integer
+          description: 预估输出 tokens 数
+        status:
+          type: string
+          description: 步骤的执行状态
+          enum: [processing, completed]
+        input_message:
+          type: string
+          description: 输入消息
+        id:
+          type: string
+          description: 步骤 ID
+        token_usage:
+          $ref: "#/components/schemas/TokenUsage"
+        think:
+          type: string
+          description: 执行步骤中的思考过程
+        agent_name:
+          type: string
+          description: 智能体名称
+        block_answer:
+          $ref: "#/components/schemas/AfSailorBlockAnswer"
+        estimated_input_tokens:
+          type: integer
+          description: 预估输入 tokens 数
+        start_time:
+          type: number
+          format: float
+          description: 开始时间戳
+        estimated_ratio_tokens:
+          type: integer
+          description: 预估比例 tokens 数
     
     Progress:
       type: object
@@ -182,6 +226,7 @@ components:
           - $ref: "#/components/schemas/ToolAnswer"
           - $ref: "#/components/schemas/Text2SqlResult"
           - $ref: "#/components/schemas/Text2MetricResult"
+          - $ref: "#/components/schemas/AfSailorResult"
         think:
           type: string
           description: 执行步骤中的思考过程
@@ -272,6 +317,7 @@ components:
       - "#/components/schemas/SearchResult"
       - $ref: "#/components/schemas/Text2SqlResult"
       - $ref: "#/components/schemas/Text2MetricResult"
+      - $ref: "#/components/schemas/AfSailorResult"
     
     TokenUsage:
       type: object
@@ -775,6 +821,62 @@ components:
               value:
                 desciption: 参数值
                 type: string
+        checked:
+          type: boolean
+          description: 是否已检查
+
+    AfSailorResult:
+      type: object
+      description: af_sailor工具的返回结果
+      properties:
+        result:
+          $ref: "#/components/schemas/AfSailorResultData"
+
+    AfSailorResultData:
+      type: object
+      description: af_sailor工具的结果数据
+      properties:
+        text:
+          type: array
+          description: 文本内容数组
+          items:
+            type: string
+        cites:
+          type: array
+          description: 数据目录引用列表
+          items:
+            $ref: "#/components/schemas/DataCatalogCite"
+        result_cache_key:
+          type: string
+          description: 结果缓存key
+
+    AfSailorBlockAnswer:
+      type: object
+      description: af_sailor工具的block_answer数据
+      properties:
+        result:
+          $ref: "#/components/schemas/AfSailorResultData"
+
+    DataCatalogCite:
+      type: object
+      description: 数据目录引用信息
+      properties:
+        type:
+          type: string
+          description: 引用类型
+          enum: [data_catalog]
+        title:
+          type: string
+          description: 数据目录标题
+        description:
+          type: string
+          description: 数据目录描述
+        id:
+          type: integer
+          description: 数据目录ID
+        code:
+          type: string
+          description: 数据目录代码
       
     ConversationListResponse:
       type: object

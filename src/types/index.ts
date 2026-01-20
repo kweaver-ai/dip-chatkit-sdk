@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * 角色类型枚举
  * 发送该消息的角色
@@ -89,6 +91,21 @@ export interface WebSearchBlock extends ContentBlock<BlockType.WEB_SEARCH, WebSe
  * 工具调用类型的消息块
  */
 export interface ToolBlock extends ContentBlock<BlockType.TOOL, ToolCallData> {}
+
+/**
+ * 工具注册信息接口
+ * 根据 ChatKit.pdf 4.22 ToolBlockRegistration 定义
+ */
+export interface ToolBlockRegistration {
+  /** 工具名称（唯一标识），对应 ToolCallData.name */
+  name: string;
+  /** 工具图标，React 元素 */
+  Icon?: React.ReactNode;
+  /** 工具点击事件
+   * @param block 工具块数据，类型为 Record<string, any>
+   */
+  onClick?: (block: Record<string, any>) => void;
+}
 
 /**
  * JSON2Plot 图表类型的消息块
@@ -221,6 +238,39 @@ export interface Text2MetricResult {
   data: Array<Record<string, any>>;
   /** 查询参数（args） */
   args: any;
+}
+
+/**
+ * 数据目录引用接口
+ * 根据 OpenAPI 规范定义
+ */
+export interface DataCatalogCite {
+  /** 引用类型 */
+  type: 'data_catalog';
+  /** 数据目录标题 */
+  title: string;
+  /** 数据目录描述 */
+  description?: string;
+  /** 数据目录ID */
+  id: number;
+  /** 数据目录代码 */
+  code?: string;
+}
+
+/**
+ * AfSailor 结果接口
+ * AfSailor 工具的输入和输出信息
+ * 根据 ChatKit.pdf 4.24 AfSailorResult 和 OpenAPI 规范定义
+ */
+export interface AfSailorResult {
+  /** 查询结果数据 */
+  data: Array<Record<string, string>>;
+  /** 文本内容数组 */
+  text?: string[];
+  /** 数据目录引用列表 */
+  cites?: DataCatalogCite[];
+  /** 结果缓存key */
+  result_cache_key?: string;
 }
 
 /**

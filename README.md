@@ -484,6 +484,52 @@ interface ChatKitInterface {
 }
 ```
 
+### BlockRegistry 消息工具注册管理
+
+对除了内置工具以外的工具支持自定义扩展
+
+```typescript
+ type ToolBlockRegistration {
+    /** 工具名称（唯一标识），对应 ToolCallData.name */
+    name: string;
+    /** 工具图标，React 元素 */
+    Icon?: React.ReactNode;
+    /** 工具点击事件
+    * @param block 工具块数据，类型为 Record<string, any>
+    */
+    onClick?: (block: Record<string, any>) => void;
+ }
+
+  //  接口注册方法
+  registerTool(registration: ToolBlockRegistration)
+
+  // 取消注册方法
+  unregisterTool(toolName: string) 
+
+  // 获取注册信息
+  getTool(toolName: string) => ToolBlockRegistration | undefined
+
+  // 查询工具是否已经注册
+  hasTool(toolName: string) => boolean
+  // 所欲注册工具
+  clearAll()
+
+  // 获取所有已注册功德名称
+  getAllToolNames() => string[]
+```
+示例
+
+   ```typescript
+   BlockRegistry.registerTool({
+     name: 'your_tool_name',
+     Icon: <YourIcon />,
+     onClick: (block) => {
+       // 自定义处理逻辑
+     },
+   });
+   ```
+
+
 ## 架构设计
 
 ### Mixin 模式

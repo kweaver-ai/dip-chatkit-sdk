@@ -37,3 +37,7 @@ export type {
   EventStreamMessage,
   ConversationHistory,
 } from './types';
+
+// ============ Block Registry ============
+export { BlockRegistry } from './utils/BlockRegistry';
+export type { ToolBlockRegistration } from './utils/BlockRegistry';

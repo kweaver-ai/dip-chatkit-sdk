@@ -10,7 +10,7 @@ import {
   BlockType,
 } from '../../types';
 import { Constructor } from '../../utils/mixins';
-import { Text2SqlIcon, Text2MetricIcon } from '../icons';
+import { Text2SqlIcon, Text2MetricIcon, AfSailorIcon } from '../icons';
 
 /**
  * DIP 的 AssistantMessage 接口
@@ -986,6 +986,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       if (text2MetricResult) {
         (this as any).appendText2MetricBlock(messageId, text2MetricResult);
       }
+    } else if (skillName === 'af_sailor') {
+      // AfSailor 工具：解析找数查询结果
+      const afSailorResult = this.extractAfSailorResult(skillInfo.args, answer);
+      if (afSailorResult) {
+        (this as any).appendAfSailorBlock(messageId, afSailorResult);
+      }
     } else {
       // 其他技能：输出技能名称
       (this as any).appendMarkdownBlock(messageId, `调用工具: ${skillName}`);
@@ -1377,6 +1383,65 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
   }
 
   /**
+   * 从 skill_info.args 和 answer 中提取 AfSailor 结果
+   * 用于处理 af_sailor 工具的输入和输出
+   * 根据 OpenAPI 规范，AfSailorResult 包含 result
+   * - result: AfSailorResultData（包含 text、cites、result_cache_key）
+   * 根据 ChatKit.pdf，AfSailorResult 包含 data（Array<Record<string, string>>）
+   * @param _args skill_info.args 数组，包含查询参数（当前未使用，保留以保持接口一致性）
+   * @param answer 技能执行的 answer 字段，包含找数查询结果
+   * @returns AfSailorResult 对象，包含 data、text、cites 等信息
+   */
+  public extractAfSailorResult(
+    _args: Array<{name?: string; type?: string; value?: string}> | undefined,
+    answer: any
+  ): { data: Array<Record<string, string>>; text?: string[]; cites?: any[]; result_cache_key?: string } | null {
+    try {
+      // 根据 schema: AfSailorResult { result: AfSailorResultData }
+      const result = answer?.result;
+      
+      // 如果 result 不存在，返回 null
+      if (!result) {
+        return null;
+      }
+
+      // 从数据中提取字段
+      const text = result?.text || [];
+      const cites = result?.cites || [];
+      const result_cache_key = result?.result_cache_key;
+
+      // 将 text 数组转换为 data 数组（Array<Record<string, string>>）
+      // 如果 text 是字符串数组，将其转换为对象数组
+      let data: Array<Record<string, string>> = [];
+      if (Array.isArray(text) && text.length > 0) {
+        // 如果 text 是字符串数组，将其转换为对象数组
+        // 每个字符串作为一个对象的 value
+        data = text.map((item, index) => {
+          if (typeof item === 'string') {
+            return { value: item, index: String(index) };
+          }
+          return item as Record<string, string>;
+        });
+      }
+
+      // 如果没有数据，返回 null
+      if (data.length === 0 && (!text || text.length === 0)) {
+        return null;
+      }
+
+      return {
+        data,
+        text: Array.isArray(text) ? text : [],
+        cites: Array.isArray(cites) ? cites : [],
+        result_cache_key,
+      };
+    } catch (e) {
+      console.error('提取 AfSailor 结果失败:', e);
+      return null;
+    }
+  }
+
+  /**
    * 将技能调用或 LLM 回答的内容追加到消息中
    * 用于历史消息解析，根据 stage 和 skill_info 将内容添加到 ChatMessage.content 数组
    * @param item Progress 或 OtherTypeAnswer 对象
@@ -1472,6 +1537,23 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
               icon: <Text2MetricIcon />,
               output: {
                 data: text2MetricResult.data,
+              },
+            },
+          });
+        }
+      } else if (skillName === 'af_sailor') {
+        // AfSailor 工具
+        const afSailorResult = this.extractAfSailorResult(item.skill_info?.args, item.answer);
+        if (afSailorResult) {
+          message.content.push({
+            type: BlockType.TOOL,
+            content: {
+              name: 'af_sailor',
+              title: `找到${afSailorResult?.cites?.length || 0}条数据`,
+              input: afSailorResult.text || [],
+              icon: <AfSailorIcon />,
+              output: {
+                data: afSailorResult.cites,
               },
             },
           });

@@ -12,6 +12,7 @@ export { TableIcon } from './TableIcon';
 export { JsonPlotIcon } from './JsonPlotIcon';
 export { Text2SqlIcon } from './Text2SqlIcon';
 export { Text2MetricIcon } from './Text2MetricIcon';
+export { AfSailorIcon } from './AfSailorIcon';
 export { AssistantIcon } from './AssistantIcon';
 export { MoreIcon } from './MoreIcon';
 export { NewIcon } from './NewIcon';

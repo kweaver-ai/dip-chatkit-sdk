@@ -1,6 +1,6 @@
 import { Component } from 'react';
-import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, Text2MetricResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock } from '../../types';
-import { Text2SqlIcon, Text2MetricIcon } from '../icons';
+import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, Text2MetricResult, AfSailorResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock } from '../../types';
+import { Text2SqlIcon, Text2MetricIcon, AfSailorIcon } from '../icons';
 
 /**
  * ChatKitBase 组件的属性接口
@@ -475,6 +475,42 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
               type: BlockType.JSON2PLOT,
               content: chartData,
             } as Json2PlotBlock,
+          ];
+
+          return { ...msg, content: newContent };
+        }
+        return msg;
+      });
+
+      return { messages: newMessages };
+    });
+  }
+
+  /**
+   * 添加 AfSailor 工具类型的消息块
+   * 该方法由子类调用，用于在消息中添加 AfSailor 查询结果
+   * @param messageId 消息 ID
+   * @param result AfSailor 的输入和输出结果
+   */
+  protected appendAfSailorBlock(messageId: string, result: AfSailorResult): void {
+    this.setState((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId === messageId) {
+          // 添加 AfSailor 工具块
+          const newContent = [
+            ...msg.content,
+            {
+              type: BlockType.TOOL,
+              content: {
+                name: 'af_sailor',
+                title:`找到${result?.cites?.length || 0}条数据`,
+                icon: <AfSailorIcon />,
+                input: result.text || [],
+                output: {
+                  data: result.cites,
+                },
+              },
+            } as ToolBlock,
           ];
 
           return { ...msg, content: newContent };
