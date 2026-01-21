@@ -274,6 +274,35 @@ export interface AfSailorResult {
 }
 
 /**
+ * 数据目录匹配结果接口
+ * 根据 OpenAPI 规范定义
+ */
+export interface DataCatalogMatch {
+  /** 引用类型 */
+  type: 'data_catalog';
+  /** 数据目录标题 */
+  title: string;
+  /** 数据目录ID */
+  id: string;
+  /** 匹配原因 */
+  reason?: string;
+  /** 匹配的列信息，键为字段技术名称，值为字段值 */
+  matched_columns?: Array<Record<string, string>>;
+}
+
+/**
+ * DatasourceFilter 结果接口
+ * DatasourceFilter 工具的输入和输出信息
+ * 根据 OpenAPI 规范和设计文档定义
+ */
+export interface DatasourceFilterResult {
+  /** 数据目录匹配结果列表 */
+  result: DataCatalogMatch[];
+  /** 结果缓存key */
+  result_cache_key?: string;
+}
+
+/**
  * 工具调用数据接口
  * 工具调用的输入和输出信息
  */

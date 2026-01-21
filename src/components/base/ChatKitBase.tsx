@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, Text2MetricResult, AfSailorResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock } from '../../types';
+import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, Text2MetricResult, AfSailorResult, DatasourceFilterResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock } from '../../types';
 import { Text2SqlIcon, Text2MetricIcon, AfSailorIcon } from '../icons';
 
 /**
@@ -508,6 +508,42 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
                 input: result.text || [],
                 output: {
                   data: result.cites,
+                },
+              },
+            } as ToolBlock,
+          ];
+
+          return { ...msg, content: newContent };
+        }
+        return msg;
+      });
+
+      return { messages: newMessages };
+    });
+  }
+
+  /**
+   * 添加 DatasourceFilter 工具类型的消息块
+   * 该方法由子类调用，用于在消息中添加 DatasourceFilter 查询结果
+   * @param messageId 消息 ID
+   * @param result DatasourceFilter 的输入和输出结果
+   */
+  protected appendDatasourceFilterBlock(messageId: string, result: DatasourceFilterResult): void {
+    this.setState((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId === messageId) {
+          // 添加 DatasourceFilter 工具块
+          const newContent = [
+            ...msg.content,
+            {
+              type: BlockType.TOOL,
+              content: {
+                name: 'datasource_filter',
+                title: `匹配到${result?.result?.length || 0}个数据`,
+                icon: <AfSailorIcon />,
+                input: [],
+                output: {
+                  data: result.result,
                 },
               },
             } as ToolBlock,

@@ -125,11 +125,18 @@ export class BlockRegistry {
   private static registry: Map<string, ToolBlockRegistration> = new Map();
 
   /**
-   * 注册工具信息
+   * 注册单个工具信息
    * @param registration 工具注册信息，包含 name, Icon, onClick
-   * @throws 如果工具名称已注册，将抛出错误
+   * 如果工具已注册，将直接覆盖原有注册信息
    */
   static registerTool(registration: ToolBlockRegistration): void;
+
+  /**
+   * 批量注册工具信息
+   * @param registrations 工具注册信息数组，包含 name, Icon, onClick
+   * 如果工具已注册，将直接覆盖原有注册信息
+   */
+  static registerTools(registrations: Array<ToolBlockRegistration>): void;
 
   /**
    * 取消注册
@@ -492,8 +499,8 @@ function App() {
 ```typescript
 import { BlockRegistry } from '@dip/chatkit-sdk';
 
-// 批量注册工具
-const toolRegistrations = [
+// 批量注册工具（推荐使用 registerTools 方法）
+BlockRegistry.registerTools([
   {
     name: 'text2sql',
     Icon: <SqlIcon />,
@@ -509,6 +516,12 @@ const toolRegistrations = [
     Icon: 'https://example.com/code-icon.png',
     // 不提供 onClick，将使用默认的抽屉行为
   },
+]);
+
+// 或者逐个注册
+const toolRegistrations = [
+  { name: 'tool1', Icon: <Icon1 /> },
+  { name: 'tool2', Icon: <Icon2 /> },
 ];
 
 toolRegistrations.forEach(registration => {
@@ -522,8 +535,8 @@ toolRegistrations.forEach(registration => {
 
 1. **线程安全**：使用 Map 存储，操作简单且高效
 2. **类型安全**：使用 TypeScript 类型定义确保类型安全
-3. **错误处理**：重复注册时提供友好的错误提示
-4. **调试支持**：提供 `getAllToolNames()` 方法便于调试
+3. **自动覆盖**：重复注册同一个工具时直接覆盖原有注册信息，不会抛出错误
+4. **调试支持**：提供 `getAllToolNames()` 方法便于调试，控制台会输出注册和更新日志
 5. **注册信息**：只存储工具的自定义信息（Icon 和 onClick），不存储整个组件
 
 ### 5.2 ToolBlock 实现要点
@@ -650,7 +663,7 @@ toolRegistrations.forEach(registration => {
 
 ### 7.6 错误处理
 
-- **重复注册**：重复注册同一个工具名称会抛出错误，注册前应检查
+- **重复注册**：重复注册同一个工具名称时会自动覆盖原有注册信息，不会抛出错误，可直接调用 `registerTool` 或 `registerTools` 更新工具配置
 - **工具不存在**：注册的工具可能在消息中不会出现，这是正常情况
 - **回调错误**：`onClick` 回调中的错误不会影响 ChatKit 的正常运行
 
@@ -679,8 +692,9 @@ toolRegistrations.forEach(registration => {
    - 回调函数接收完整的 `block` 对象作为参数
 
 3. **注册工具信息**
-   - 在应用初始化时调用 `BlockRegistry.registerTool()` 注册
+   - 在应用初始化时调用 `BlockRegistry.registerTool()` 或 `BlockRegistry.registerTools()` 注册
    - 确保工具名称与 `ToolCallData.name` 完全匹配
+   - 如果工具已注册，再次调用会直接覆盖原有配置，无需先取消注册
 
 4. **测试验证**
    - 确认工具块显示正确的图标
@@ -714,6 +728,19 @@ BlockRegistry.registerTool({
 BlockRegistry.registerTool({
   name: 'my_tool',
   Icon: 'https://example.com/tool-icon.png',
+});
+```
+
+**场景 4：更新已注册的工具**
+```typescript
+// 直接调用 registerTool 即可覆盖原有配置，无需先取消注册
+BlockRegistry.registerTool({
+  name: 'my_tool',
+  Icon: <NewIcon />, // 更新图标
+  onClick: (block) => {
+    // 更新点击行为
+    openNewDialog(block);
+  },
 });
 ```
 

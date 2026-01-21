@@ -488,46 +488,85 @@ interface ChatKitInterface {
 
 对除了内置工具以外的工具支持自定义扩展
 
+#### 类型定义
+
 ```typescript
- type ToolBlockRegistration {
-    /** 工具名称（唯一标识），对应 ToolCallData.name */
-    name: string;
-    /** 工具图标，React 元素 */
-    Icon?: React.ReactNode;
-    /** 工具点击事件
-    * @param block 工具块数据，类型为 Record<string, any>
-    */
-    onClick?: (block: Record<string, any>) => void;
- }
-
-  //  接口注册方法
-  registerTool(registration: ToolBlockRegistration)
-
-  // 取消注册方法
-  unregisterTool(toolName: string) 
-
-  // 获取注册信息
-  getTool(toolName: string) => ToolBlockRegistration | undefined
-
-  // 查询工具是否已经注册
-  hasTool(toolName: string) => boolean
-  // 所欲注册工具
-  clearAll()
-
-  // 获取所有已注册功德名称
-  getAllToolNames() => string[]
+type ToolBlockRegistration {
+  /** 工具名称（唯一标识），对应 ToolCallData.name */
+  name: string;
+  /** 工具图标，React 元素 */
+  Icon?: React.ReactNode;
+  /** 工具点击事件
+   * @param block 工具块数据，类型为 Record<string, any>
+   */
+  onClick?: (block: Record<string, any>) => void;
+}
 ```
-示例
 
-   ```typescript
-   BlockRegistry.registerTool({
-     name: 'your_tool_name',
-     Icon: <YourIcon />,
-     onClick: (block) => {
-       // 自定义处理逻辑
-     },
-   });
-   ```
+#### API 方法
+
+```typescript
+// 注册单个工具（如果工具已注册，将直接覆盖原有注册信息）
+registerTool(registration: ToolBlockRegistration): void
+
+// 批量注册工具（如果工具已注册，将直接覆盖原有注册信息）
+registerTools(registrations: Array<ToolBlockRegistration>): void
+
+// 取消注册方法
+unregisterTool(toolName: string): void
+
+// 获取注册信息
+getTool(toolName: string): ToolBlockRegistration | undefined
+
+// 查询工具是否已经注册
+hasTool(toolName: string): boolean
+
+// 清空所有注册工具
+clearAll(): void
+
+// 获取所有已注册工具名称
+getAllToolNames(): string[]
+```
+
+#### 使用示例
+
+**注册单个工具**：
+```typescript
+BlockRegistry.registerTool({
+  name: 'your_tool_name',
+  Icon: <YourIcon />,
+  onClick: (block) => {
+    // 自定义处理逻辑
+  },
+});
+```
+
+**批量注册工具**：
+```typescript
+BlockRegistry.registerTools([
+  {
+    name: 'tool1',
+    Icon: <Icon1 />,
+    onClick: (block) => { /* 处理逻辑 */ },
+  },
+  {
+    name: 'tool2',
+    Icon: <Icon2 />,
+  },
+]);
+```
+
+**重新注册工具（覆盖）**：
+```typescript
+// 如果工具已注册，直接调用 registerTool 即可覆盖
+BlockRegistry.registerTool({
+  name: 'your_tool_name',
+  Icon: <NewIcon />, // 更新图标
+  onClick: (block) => {
+    // 更新点击行为
+  },
+});
+```
 
 
 ## 架构设计

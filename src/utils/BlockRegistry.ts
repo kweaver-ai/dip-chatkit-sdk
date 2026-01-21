@@ -27,16 +27,35 @@ export class BlockRegistry {
   private static registry: Map<string, ToolBlockRegistration> = new Map();
 
   /**
-   * 注册工具信息
+   * 注册单个工具信息
    * @param registration 工具注册信息，包含 name, Icon, onClick
-   * @throws 如果工具名称已注册，将抛出错误
+   * 如果工具已注册，将直接覆盖原有注册信息
    */
   static registerTool(registration: ToolBlockRegistration): void {
-    if (this.registry.has(registration.name)) {
-      throw new Error(`工具 "${registration.name}" 已注册，请先取消注册或使用不同的工具名称`);
-    }
+    const isUpdate = this.registry.has(registration.name);
     this.registry.set(registration.name, registration);
-    console.log(`已注册工具: ${registration.name}`);
+    if (isUpdate) {
+      console.log(`已更新工具: ${registration.name}`);
+    } else {
+      console.log(`已注册工具: ${registration.name}`);
+    }
+  }
+
+  /**
+   * 批量注册工具信息
+   * @param registrations 工具注册信息数组，包含 name, Icon, onClick
+   * 如果工具已注册，将直接覆盖原有注册信息
+   */
+  static registerTools(registrations: Array<ToolBlockRegistration>): void {
+    registrations.forEach(item => {
+      const isUpdate = this.registry.has(item.name);
+      this.registry.set(item.name, item);
+      if (isUpdate) {
+        console.log(`已更新工具: ${item.name}`);
+      } else {
+        console.log(`已注册工具: ${item.name}`);
+      }
+    });
   }
 
   /**

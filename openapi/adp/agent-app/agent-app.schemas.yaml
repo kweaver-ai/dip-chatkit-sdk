@@ -162,6 +162,7 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ExecuteCodeResult'
             - $ref: '#/components/schemas/AfSailorResult'
+            - $ref: '#/components/schemas/DatasourceFilterResult'
         skill_info:
           $ref: "#/components/schemas/SkillInfo"
         interrupted:
@@ -196,7 +197,9 @@ components:
           type: string
           description: 智能体名称
         block_answer:
-          $ref: "#/components/schemas/AfSailorBlockAnswer"
+          oneOf:
+            - $ref: "#/components/schemas/AfSailorBlockAnswer"
+            - $ref: "#/components/schemas/DatasourceFilterBlockAnswer"
         estimated_input_tokens:
           type: integer
           description: 预估输入 tokens 数
@@ -227,6 +230,7 @@ components:
           - $ref: "#/components/schemas/Text2SqlResult"
           - $ref: "#/components/schemas/Text2MetricResult"
           - $ref: "#/components/schemas/AfSailorResult"
+          - $ref: "#/components/schemas/DatasourceFilterResult"
         think:
           type: string
           description: 执行步骤中的思考过程
@@ -318,6 +322,7 @@ components:
       - $ref: "#/components/schemas/Text2SqlResult"
       - $ref: "#/components/schemas/Text2MetricResult"
       - $ref: "#/components/schemas/AfSailorResult"
+      - $ref: "#/components/schemas/DatasourceFilterResult"
     
     TokenUsage:
       type: object
@@ -877,6 +882,59 @@ components:
         code:
           type: string
           description: 数据目录代码
+
+    DatasourceFilterResult:
+      type: object
+      description: datasource_filter工具的返回结果
+      properties:
+        result:
+          $ref: "#/components/schemas/DatasourceFilterResultData"
+
+    DatasourceFilterResultData:
+      type: object
+      description: datasource_filter工具的结果数据
+      properties:
+        result:
+          type: array
+          description: 数据目录匹配结果列表
+          items:
+            $ref: "#/components/schemas/DataCatalogMatch"
+        result_cache_key:
+          type: string
+          description: 结果缓存key
+
+    DatasourceFilterBlockAnswer:
+      type: object
+      description: datasource_filter工具的block_answer数据
+      properties:
+        result:
+          $ref: "#/components/schemas/DatasourceFilterResultData"
+
+    DataCatalogMatch:
+      type: object
+      description: 数据目录匹配结果
+      properties:
+        type:
+          type: string
+          description: 引用类型
+          enum: [data_catalog]
+        title:
+          type: string
+          description: 数据目录标题
+        id:
+          type: string
+          description: 数据目录ID
+        reason:
+          type: string
+          description: 匹配原因
+        matched_columns:
+          type: array
+          description: 匹配的列信息
+          items:
+            type: object
+            description: 匹配的列，键为字段技术名称，值为字段值
+            additionalProperties:
+              type: string
       
     ConversationListResponse:
       type: object

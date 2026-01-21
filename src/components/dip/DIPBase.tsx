@@ -992,6 +992,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       if (afSailorResult) {
         (this as any).appendAfSailorBlock(messageId, afSailorResult);
       }
+    } else if (skillName === 'datasource_filter') {
+      // DatasourceFilter 工具：解析数据源过滤结果
+      const datasourceFilterResult = this.extractDatasourceFilterResult(skillInfo.args, answer);
+      if (datasourceFilterResult) {
+        (this as any).appendDatasourceFilterBlock(messageId, datasourceFilterResult);
+      }
     } else {
       // 其他技能：输出技能名称
       (this as any).appendMarkdownBlock(messageId, `调用工具: ${skillName}`);
@@ -1442,6 +1448,48 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
   }
 
   /**
+   * 从 skill_info.args 和 answer 中提取 DatasourceFilter 结果
+   * 用于处理 datasource_filter 工具的输入和输出
+   * 根据 OpenAPI 规范，DatasourceFilterResult 包含 result
+   * - result: DatasourceFilterResultData（包含 result、result_cache_key）
+   * - result.result: DataCatalogMatch[]（数据目录匹配结果列表）
+   * @param _args skill_info.args 数组，包含查询参数（当前未使用，保留以保持接口一致性）
+   * @param answer 技能执行的 answer 字段，包含数据源过滤结果
+   * @returns DatasourceFilterResult 对象，包含 result、result_cache_key 等信息
+   */
+  public extractDatasourceFilterResult(
+    _args: Array<{name?: string; type?: string; value?: string}> | undefined,
+    answer: any
+  ): { result: Array<any>; result_cache_key?: string } | null {
+    try {
+      // 根据 schema: DatasourceFilterResult { result: DatasourceFilterResultData }
+      const resultData = answer?.result;
+      
+      // 如果 result 不存在，返回 null
+      if (!resultData) {
+        return null;
+      }
+
+      // 从数据中提取字段
+      const result = resultData?.result || [];
+      const result_cache_key = resultData?.result_cache_key;
+
+      // 如果没有匹配结果，返回 null
+      if (!Array.isArray(result) || result.length === 0) {
+        return null;
+      }
+
+      return {
+        result: result,
+        result_cache_key,
+      };
+    } catch (e) {
+      console.error('提取 DatasourceFilter 结果失败:', e);
+      return null;
+    }
+  }
+
+  /**
    * 将技能调用或 LLM 回答的内容追加到消息中
    * 用于历史消息解析，根据 stage 和 skill_info 将内容添加到 ChatMessage.content 数组
    * @param item Progress 或 OtherTypeAnswer 对象
@@ -1554,6 +1602,23 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
               icon: <AfSailorIcon />,
               output: {
                 data: afSailorResult.cites,
+              },
+            },
+          });
+        }
+      } else if (skillName === 'datasource_filter') {
+        // DatasourceFilter 工具
+        const datasourceFilterResult = this.extractDatasourceFilterResult(item.skill_info?.args, item.answer);
+        if (datasourceFilterResult) {
+          message.content.push({
+            type: BlockType.TOOL,
+            content: {
+              name: 'datasource_filter',
+              title: `匹配到${datasourceFilterResult?.result?.length || 0}个数据`,
+              input: [],
+              icon: <AfSailorIcon />,
+              output: {
+                data: datasourceFilterResult.result,
               },
             },
           });
