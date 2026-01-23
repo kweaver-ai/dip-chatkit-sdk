@@ -116,7 +116,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
       <div
         className={`flex flex-col gap-2 ${
-          isUser ? 'max-w-[calc(100%-40px)]' : 'w-full'
+          isUser ? 'max-w-[calc(100%-30px)]' : 'w-[calc(100%-30px)]'
         }`}
       >
         {/* 如果用户消息包含应用上下文，在消息内容中显示 */}
