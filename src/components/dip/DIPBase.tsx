@@ -2041,5 +2041,169 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         throw error;
       }
     }
+
+    /**
+     * 获取知识网络详情
+     * 调用 DIP 的 GET /api/ontology-manager/v1/knowledge-networks/{id} 接口
+     * API 端点: GET /api/ontology-manager/v1/knowledge-networks/{id}
+     * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
+     * @param id 知识网络 ID
+     * @returns 返回知识网络详情
+     */
+    public async getKnowledgeNetworksDetail(id: string): Promise<any> {
+      try {
+        console.log('正在获取知识网络详情，id:', id);
+
+        // 构造 URL
+        let url: string;
+        if (this.dipBaseUrl.startsWith('http://') || this.dipBaseUrl.startsWith('https://')) {
+          const baseUrlObj = new URL(this.dipBaseUrl);
+          url = `${baseUrlObj.protocol}//${baseUrlObj.host}/api/ontology-manager/v1/knowledge-networks/${encodeURIComponent(id)}`;
+        } else {
+          url = `/api/ontology-manager/v1/knowledge-networks/${encodeURIComponent(id)}`;
+        }
+
+        // 使用 executeDataAgentWithTokenRefresh 包装 API 调用，支持 token 刷新和重试
+        const result = await this.executeDataAgentWithTokenRefresh(async () => {
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${this.dipToken}`,
+            },
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            const error: any = new Error(`获取知识网络详情失败: ${response.status} - ${errorText}`);
+            error.status = response.status;
+            error.body = errorText;
+            throw error;
+          }
+
+          return await response.json();
+        });
+
+        console.log('知识网络详情获取成功');
+        return result.data || result;
+      } catch (error) {
+        console.error('获取知识网络详情失败:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * 获取知识网络的对象类型
+     * 调用 DIP 的 GET /api/ontology-manager/v1/knowledge-networks/{id}/object-types 接口
+     * API 端点: GET /api/ontology-manager/v1/knowledge-networks/{id}/object-types
+     * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
+     * @param id 知识网络 ID
+     * @param offset 偏移量，默认 0
+     * @param limit 每页返回条数，默认 -1（全部）
+     * @returns 返回对象类型列表
+     */
+    public async getKnowledgeNetworkObjectTypes(
+      id: string,
+      offset: number = 0,
+      limit: number = -1
+    ): Promise<any> {
+      try {
+        console.log('正在获取知识网络对象类型，id:', id, 'offset:', offset, 'limit:', limit);
+
+        // 构造 URL
+        let baseUrl: string;
+        if (this.dipBaseUrl.startsWith('http://') || this.dipBaseUrl.startsWith('https://')) {
+          const baseUrlObj = new URL(this.dipBaseUrl);
+          baseUrl = `${baseUrlObj.protocol}//${baseUrlObj.host}`;
+        } else {
+          baseUrl = '';
+        }
+
+        const url = `${baseUrl}/api/ontology-manager/v1/knowledge-networks/${encodeURIComponent(id)}/object-types?offset=${offset}&limit=${limit}`;
+
+        // 使用 executeDataAgentWithTokenRefresh 包装 API 调用，支持 token 刷新和重试
+        const result = await this.executeDataAgentWithTokenRefresh(async () => {
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${this.dipToken}`,
+            },
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            const error: any = new Error(`获取知识网络对象类型失败: ${response.status} - ${errorText}`);
+            error.status = response.status;
+            error.body = errorText;
+            throw error;
+          }
+
+          return await response.json();
+        });
+
+        console.log('知识网络对象类型获取成功');
+        return result.data || result;
+      } catch (error) {
+        console.error('获取知识网络对象类型失败:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * 根据指标 ID 获取指标信息
+     * 调用 DIP 的 GET /api/mdl-data-model/v1/metric-models/{ids} 接口
+     * API 端点: GET /api/mdl-data-model/v1/metric-models/{ids}
+     * 注意：该方法是一个无状态无副作用的函数，不允许修改 state
+     * @param ids 指标 ID 列表，多个用逗号隔开
+     * @returns 返回指标信息列表
+     */
+    public async getMetricInfoByIds(ids: string[]): Promise<any[]> {
+      try {
+        console.log('正在获取指标信息，ids:', ids);
+
+        if (!ids || ids.length === 0) {
+          return [];
+        }
+
+        // 构造 URL，多个 ID 用逗号隔开
+        const idsParam = ids.join(',');
+        console.log('idsParam:', idsParam);
+        let url: string;
+        if (this.dipBaseUrl.startsWith('http://') || this.dipBaseUrl.startsWith('https://')) {
+          const baseUrlObj = new URL(this.dipBaseUrl);
+          url = `${baseUrlObj.protocol}//${baseUrlObj.host}/api/mdl-data-model/v1/metric-models/${encodeURIComponent(idsParam)}`;
+        } else {
+          url = `/api/mdl-data-model/v1/metric-models/${encodeURIComponent(idsParam)}`;
+        }
+
+        // 使用 executeDataAgentWithTokenRefresh 包装 API 调用，支持 token 刷新和重试
+        const result = await this.executeDataAgentWithTokenRefresh(async () => {
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${this.dipToken}`,
+            },
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            const error: any = new Error(`获取指标信息失败: ${response.status} - ${errorText}`);
+            error.status = response.status;
+            error.body = errorText;
+            throw error;
+          }
+
+          return await response.json();
+        });
+
+        console.log('指标信息获取成功');
+        return Array.isArray(result) ? result : result.data || [];
+      } catch (error) {
+        console.error('获取指标信息失败:', error);
+        throw error;
+      }
+    }
   };
 }

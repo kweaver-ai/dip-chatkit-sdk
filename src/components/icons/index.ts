@@ -19,3 +19,6 @@ export { NewIcon } from './NewIcon';
 export { ExpandIcon } from './ExpandIcon';
 export { CopyIcon } from './CopyIcon';
 export { RefreshIcon } from './RefreshIcon';
+export { KnowledgeSourceIcon } from './KnowledgeSourceIcon';
+export { MetricIcon } from './MetricIcon';
+export { TreeExpandIcon } from './TreeExpandIcon';

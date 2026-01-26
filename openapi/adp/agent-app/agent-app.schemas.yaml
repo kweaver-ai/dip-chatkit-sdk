@@ -1043,3 +1043,405 @@ components:
         - conversation_id
         - index
         - origin
+
+    KnowledgeNetworkDetail:
+      type: object
+      description: 知识网络详情
+      properties:
+        id:
+          type: string
+          description: 知识网络 ID
+        name:
+          type: string
+          description: 知识网络名称
+        tags:
+          type: array
+          description: 标签列表
+          items:
+            type: string
+        comment:
+          type: string
+          description: 备注
+        icon:
+          type: string
+          description: 图标
+        color:
+          type: string
+          description: 颜色
+        detail:
+          type: string
+          description: 详情信息（JSON 字符串）
+        branch:
+          type: string
+          description: 分支
+        business_domain:
+          type: string
+          description: 业务域
+        creator:
+          $ref: "#/components/schemas/UserInfo"
+        create_time:
+          type: integer
+          description: 创建时间
+        updater:
+          $ref: "#/components/schemas/UserInfo"
+        update_time:
+          type: integer
+          description: 更新时间
+        module_type:
+          type: string
+          description: 模块类型
+          enum: [knowledge_network]
+        operations:
+          type: array
+          description: 操作权限列表
+          items:
+            type: string
+            enum: [modify, task_manage, view_detail, create, delete, data_query, authorize, import, export]
+
+    UserInfo:
+      type: object
+      description: 用户信息
+      properties:
+        id:
+          type: string
+          description: 用户 ID
+        type:
+          type: string
+          description: 用户类型
+          enum: [user]
+        name:
+          type: string
+          description: 用户名称
+
+    ObjectTypeListResponse:
+      type: object
+      description: 对象类型列表响应
+      properties:
+        entries:
+          type: array
+          description: 对象类型列表
+          items:
+            $ref: "#/components/schemas/ObjectType"
+        total_count:
+          type: integer
+          description: 总数
+
+    ObjectType:
+      type: object
+      description: 对象类型
+      properties:
+        id:
+          type: string
+          description: 对象类型 ID
+        name:
+          type: string
+          description: 对象类型名称
+        data_source:
+          $ref: "#/components/schemas/DataSource"
+        data_properties:
+          type: array
+          description: 数据属性列表
+          items:
+            $ref: "#/components/schemas/DataProperty"
+        primary_keys:
+          type: array
+          description: 主键列表
+          items:
+            type: string
+        display_key:
+          type: string
+          description: 显示键
+        incremental_key:
+          type: string
+          description: 增量键
+        tags:
+          type: array
+          description: 标签列表
+          items:
+            type: string
+        comment:
+          type: string
+          description: 备注
+        icon:
+          type: string
+          description: 图标
+        color:
+          type: string
+          description: 颜色
+        detail:
+          type: string
+          description: 详情
+        kn_id:
+          type: string
+          description: 知识网络 ID
+        branch:
+          type: string
+          description: 分支
+        status:
+          $ref: "#/components/schemas/ObjectTypeStatus"
+        creator:
+          $ref: "#/components/schemas/UserInfo"
+        create_time:
+          type: integer
+          description: 创建时间
+        updater:
+          $ref: "#/components/schemas/UserInfo"
+        update_time:
+          type: integer
+          description: 更新时间
+        module_type:
+          type: string
+          description: 模块类型
+          enum: [object_type]
+
+    DataSource:
+      type: object
+      description: 数据源
+      properties:
+        type:
+          type: string
+          description: 数据源类型
+          enum: [data_view]
+        id:
+          type: string
+          description: 数据源 ID
+        name:
+          type: string
+          description: 数据源名称
+
+    DataProperty:
+      type: object
+      description: 数据属性
+      properties:
+        name:
+          type: string
+          description: 属性名称
+        display_name:
+          type: string
+          description: 显示名称
+        type:
+          type: string
+          description: 属性类型
+          enum: [string, integer, float, datetime]
+        comment:
+          type: string
+          description: 备注
+        mapped_field:
+          $ref: "#/components/schemas/MappedField"
+        condition_operations:
+          type: array
+          description: 条件操作列表
+          items:
+            type: string
+            enum: [==, !=, like, not_like, in, not_in]
+
+    MappedField:
+      type: object
+      description: 映射字段
+      properties:
+        name:
+          type: string
+          description: 字段名称
+        type:
+          type: string
+          description: 字段类型
+        display_name:
+          type: string
+          description: 显示名称
+
+    ObjectTypeStatus:
+      type: object
+      description: 对象类型状态
+      properties:
+        incremental_key:
+          type: string
+          description: 增量键
+        incremental_value:
+          type: string
+          description: 增量值
+        index:
+          type: string
+          description: 索引
+        index_available:
+          type: boolean
+          description: 索引是否可用
+        doc_count:
+          type: integer
+          description: 文档数量
+        storage_size:
+          type: integer
+          description: 存储大小
+        update_time:
+          type: integer
+          description: 更新时间
+
+    MetricModel:
+      type: object
+      description: 指标模型
+      properties:
+        id:
+          type: string
+          description: 指标 ID
+        name:
+          type: string
+          description: 指标名称
+        catalog_id:
+          type: string
+          description: 目录 ID
+        catalog_content:
+          type: string
+          description: 目录内容
+        measure_name:
+          type: string
+          description: 度量名称
+        group_id:
+          type: string
+          description: 分组 ID
+        group_name:
+          type: string
+          description: 分组名称
+        tags:
+          type: array
+          description: 标签列表
+          items:
+            type: string
+        comment:
+          type: string
+          description: 备注
+        metric_type:
+          type: string
+          description: 指标类型
+          enum: [atomic, composite]
+        data_view_id:
+          type: string
+          description: 数据视图 ID
+        query_type:
+          type: string
+          description: 查询类型
+          enum: [sql]
+        formula:
+          type: string
+          description: 公式
+        formula_config:
+          $ref: "#/components/schemas/FormulaConfig"
+        analysis_dimensions:
+          type: array
+          description: 分析维度列表
+          items:
+            $ref: "#/components/schemas/AnalysisDimension"
+        date_field:
+          type: string
+          description: 日期字段
+        measure_field:
+          type: string
+          description: 度量字段
+        unit_type:
+          type: string
+          description: 单位类型
+          enum: [currencyUnit, percentageUnit]
+        unit:
+          type: string
+          description: 单位
+        builtin:
+          type: boolean
+          description: 是否内置
+        is_calendar_interval:
+          type: integer
+          description: 是否日历间隔
+        creator:
+          $ref: "#/components/schemas/UserInfo"
+        create_time:
+          type: integer
+          description: 创建时间
+        update_time:
+          type: integer
+          description: 更新时间
+        operations:
+          type: array
+          description: 操作权限列表
+          items:
+            type: string
+            enum: [modify, delete, data_query, authorize, view_detail, import, export, create]
+        data_source:
+          $ref: "#/components/schemas/MetricDataSource"
+        data_view_name:
+          type: string
+          description: 数据视图名称
+        fields_map:
+          type: object
+          description: 字段映射
+          additionalProperties:
+            $ref: "#/components/schemas/FieldMap"
+        module_type:
+          type: string
+          description: 模块类型
+          enum: [metric_model]
+
+    FormulaConfig:
+      type: object
+      description: 公式配置
+      properties:
+        aggr_expression:
+          $ref: "#/components/schemas/AggrExpression"
+
+    AggrExpression:
+      type: object
+      description: 聚合表达式
+      properties:
+        field:
+          type: string
+          description: 字段名
+        aggr:
+          type: string
+          description: 聚合函数
+          enum: [sum, avg, count, max, min]
+
+    AnalysisDimension:
+      type: object
+      description: 分析维度
+      properties:
+        name:
+          type: string
+          description: 维度名称
+        type:
+          type: string
+          description: 维度类型
+          enum: [string, integer, float, datetime]
+        display_name:
+          type: string
+          description: 显示名称
+        comment:
+          type: string
+          description: 备注
+
+    MetricDataSource:
+      type: object
+      description: 指标数据源
+      properties:
+        type:
+          type: string
+          description: 数据源类型
+          enum: [SQL]
+        id:
+          type: string
+          description: 数据源 ID
+        name:
+          type: string
+          description: 数据源名称
+
+    FieldMap:
+      type: object
+      description: 字段映射
+      properties:
+        name:
+          type: string
+          description: 字段名称
+        type:
+          type: string
+          description: 字段类型
+        display_name:
+          type: string
+          description: 显示名称
+        comment:
+          type: string
+          description: 备注

@@ -3,6 +3,7 @@ import MessageList from './MessageList';
 import InputArea from './InputArea';
 import Prologue from './Prologue';
 import ConversationHistory from './ConversationHistory';
+import LeftHeaderTool from './LeftHeaderTool';
 import { MoreIcon, NewIcon } from '@/components/icons';
 import { ChatMessage, BlockType } from '../../../types';
 
@@ -160,7 +161,27 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
     return (
       <>
         <div className="flex h-full w-full bg-white">
-          {/* 主区域 - 对话界面 */}
+          {/* 左侧栏 - Agent 信息和知识来源 */}
+          <div className="flex-initial flex px-4 py-3 ">
+            <LeftHeaderTool
+              agentInfo={(this as any).agentInfo || {}}
+              apiMethods={
+                // 检查是否有 DIPBase 的方法
+                (this as any).getKnowledgeNetworksDetail &&
+                (this as any).getKnowledgeNetworkObjectTypes &&
+                (this as any).getMetricInfoByIds
+                  ? {
+                      getKnowledgeNetworksDetail: (this as any).getKnowledgeNetworksDetail.bind(this),
+                      getKnowledgeNetworkObjectTypes: (this as any).getKnowledgeNetworkObjectTypes.bind(this),
+                      getMetricInfoByIds: (this as any).getMetricInfoByIds.bind(this),
+                    }
+                  : undefined
+              }
+              showAside={!showPrologue}
+            />
+          </div>
+
+          {/* 中间主区域 - 对话界面 */}
           <div className="flex-1 flex flex-col">
             {/* 消息列表区域或欢迎界面 */}
             <div className="flex-1 overflow-y-scroll">
@@ -209,7 +230,7 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
 
           {/* 右侧边栏 - 历史对话和新对话按钮 */}
           {enableHistory && (
-            <div className="w-[300px] bg-white flex flex-col">
+            <div className="w-[300px] bg-white flex flex-col flex-shrink-0">
               <div className="px-6 pt-6 flex flex-col gap-2">
                 {/* 相关历史对话按钮 */}
                 <button

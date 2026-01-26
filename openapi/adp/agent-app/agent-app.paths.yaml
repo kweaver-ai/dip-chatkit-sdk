@@ -170,3 +170,115 @@ paths:
                   description: 会话 ID
               required:
               - conversation_id
+
+  /api/ontology-manager/v1/knowledge-networks/{id}:
+    get:
+      summary: 获取知识网络的详情
+      tags:
+        - 知识网络
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 知识网络 ID
+          schema:
+            type: string
+        - name: include_detail
+          in: query
+          required: false
+          description: 是否包含详情
+          schema:
+            type: boolean
+            default: false
+        - name: include_statistics
+          in: query
+          required: false
+          description: 是否包含统计信息
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: ./agent-app.schemas.yaml#/components/schemas/KnowledgeNetworkDetail
+
+  /api/ontology-manager/v1/knowledge-networks/{id}/object-types:
+    get:
+      summary: 获取知识网络的对象类型
+      tags:
+        - 知识网络
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 知识网络 ID
+          schema:
+            type: string
+        - name: offset
+          in: query
+          required: false
+          description: 偏移量
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          description: 每页返回条数
+          schema:
+            type: integer
+            default: -1
+        - name: sort
+          in: query
+          required: false
+          description: 排序字段
+          schema:
+            type: string
+            default: update_time
+        - name: direction
+          in: query
+          required: false
+          description: 排序方向
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: name_pattern
+          in: query
+          required: false
+          description: 名称匹配模式
+          schema:
+            type: string
+            default: ""
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: ./agent-app.schemas.yaml#/components/schemas/ObjectTypeListResponse
+
+  /api/mdl-data-model/v1/metric-models/{ids}:
+    get:
+      summary: 获取指标信息
+      tags:
+        - 指标模型
+      parameters:
+        - name: ids
+          in: path
+          required: true
+          description: 指标 ID，多个用逗号隔开
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: ./agent-app.schemas.yaml#/components/schemas/MetricModel
