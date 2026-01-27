@@ -25,6 +25,7 @@ export interface ToolBlockProps {
 const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { icon, title, name, input, output } = block.content;
+  const { consumeTime } = block;
 
   // 根据设计文档流程：判断当前 skill_name 是否在注册的工具中
   const isRegistered = BlockRegistry.hasTool(name);
@@ -91,6 +92,15 @@ const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
               {title}
             </span>
           </div>
+
+          {/* 中间：耗时显示（如果有） */}
+          {consumeTime !== undefined && (
+            <div className="flex items-center mr-4 flex-shrink-0">
+              <span className="text-sm text-[rgba(0,0,0,0.45)]">
+                耗时：{Number(consumeTime/1000).toFixed(2)}s
+              </span>
+            </div>
+          )}
 
           {/* 右侧：箭头图标 */}
           <div className="flex items-center justify-center w-4 h-4 flex-shrink-0">

@@ -44,7 +44,16 @@ const EChartsView: React.FC<EChartsViewProps> = ({
   // 转换数据为 ECharts Option
   const option = useMemo(() => {
     if (chartTypeError) return null;
-    return convertToEChartsOption(data, chartType);
+    const baseOption = convertToEChartsOption(data, chartType);
+    if (!baseOption) return null;
+    // 隐藏图例
+    return {
+      ...baseOption,
+      legend: {
+        ...baseOption.legend,
+        show: false,
+      },
+    };
   }, [data, chartType, chartTypeError]);
   
   // 初始化图表

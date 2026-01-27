@@ -39,6 +39,8 @@ interface OtherTypeAnswer {
   stage?: string;
   answer?: any;
   skill_info?: SkillInfo;
+  start_time?: number;
+  end_time?: number;
 }
 
 /**
@@ -64,6 +66,8 @@ interface Progress {
   stage?: string;
   answer?: string | any;
   skill_info?: SkillInfo;
+  start_time?: number;
+  end_time?: number;
 }
 
 /**
@@ -636,7 +640,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             if (content?.skill_info?.name === 'json2plot') {
               const chartData = this.extractJson2PlotData(content);
               if (chartData) {
-                (this as any).appendJson2PlotBlock(messageId, chartData);
+                const consumeTime = this.calculateConsumeTime(content.start_time, content.end_time);
+                (this as any).appendJson2PlotBlock(messageId, chartData, consumeTime);
               }
             }
             // 检查是否是 search_memory, _date, build_memory 技能
@@ -934,13 +939,27 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
   }
 
   /**
+   * 计算耗时（毫秒）
+   * @param startTime 开始时间戳
+   * @param endTime 结束时间戳
+   * @returns 耗时（毫秒），如果时间戳无效则返回 undefined
+   */
+  public calculateConsumeTime(startTime?: number, endTime?: number): number | undefined {
+    if (startTime && endTime && endTime > startTime) {
+      return Math.round((endTime - startTime) * 1000); // 转换为毫秒并四舍五入
+    }
+    return undefined;
+  }
+
+  /**
    * 处理技能调用的统一方法
    * 根据设计文档 3.2 Event Message 白名单中的后处理逻辑
    * @param skillInfo 技能信息
    * @param answer 技能执行的 answer 字段
    * @param messageId 消息 ID
+   * @param consumeTime 耗时（毫秒），可选
    */
-  public processSkillExecution(skillInfo: SkillInfo | undefined, answer: any, messageId: string): void {
+  public processSkillExecution(skillInfo: SkillInfo | undefined, answer: any, messageId: string, consumeTime?: number): void {
     if (!skillInfo?.name) {
       return;
     }
@@ -966,41 +985,41 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       // json2plot 工具：将 skill_info.args 和 answer 解析出 ChartDataSchema 结构并输出到界面
       const chartData = this.extractChartDataFromArgs(skillInfo.args, answer);
       if (chartData) {
-        (this as any).appendJson2PlotBlock(messageId, chartData);
+        (this as any).appendJson2PlotBlock(messageId, chartData, consumeTime);
       }
     } else if (skillName === 'execute_code') {
       // 代码执行工具：解析代码输入和输出
       const executeCodeResult = this.extractExecuteCodeResult(skillInfo.args, answer);
       if (executeCodeResult) {
-        (this as any).appendExecuteCodeBlock(messageId, executeCodeResult);
+        (this as any).appendExecuteCodeBlock(messageId, executeCodeResult, consumeTime);
       }
     } else if (skillName === 'text2sql') {
       // Text2SQL 工具：解析查询输入、SQL 语句和执行结果
       const text2SqlResult = this.extractText2SqlResult(skillInfo.args, answer);
       if (text2SqlResult) {
-        (this as any).appendText2SqlBlock(messageId, text2SqlResult);
+        (this as any).appendText2SqlBlock(messageId, text2SqlResult, consumeTime);
       }
     } else if (skillName === 'text2metric') {
       // Text2Metric 工具：解析查询输入和指标数据
       const text2MetricResult = this.extractText2MetricResult(skillInfo.args, answer);
       if (text2MetricResult) {
-        (this as any).appendText2MetricBlock(messageId, text2MetricResult);
+        (this as any).appendText2MetricBlock(messageId, text2MetricResult, consumeTime);
       }
     } else if (skillName === 'af_sailor') {
       // AfSailor 工具：解析找数查询结果
       const afSailorResult = this.extractAfSailorResult(skillInfo.args, answer);
       if (afSailorResult) {
-        (this as any).appendAfSailorBlock(messageId, afSailorResult);
+        (this as any).appendAfSailorBlock(messageId, afSailorResult, consumeTime);
       }
     } else if (skillName === 'datasource_filter') {
       // DatasourceFilter 工具：解析数据源过滤结果
       const datasourceFilterResult = this.extractDatasourceFilterResult(skillInfo.args, answer);
       if (datasourceFilterResult) {
-        (this as any).appendDatasourceFilterBlock(messageId, datasourceFilterResult);
+        (this as any).appendDatasourceFilterBlock(messageId, datasourceFilterResult, consumeTime);
       }
     } else {
       // 其他技能：输出技能名称
-      (this as any).appendMarkdownBlock(messageId, `调用工具: ${skillName}`);
+      // (this as any).appendMarkdownBlock(messageId, `调用工具: ${skillName}`);
     }
   }
 
@@ -1013,7 +1032,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
    */
   public processMiddleAnswerProgress(content: Progress, messageId: string): void {
     if (content?.stage === 'skill') {
-      this.processSkillExecution(content.skill_info, content.answer, messageId);
+      const consumeTime = this.calculateConsumeTime(content.start_time, content.end_time);
+      this.processSkillExecution(content.skill_info, content.answer, messageId, consumeTime);
     } else if (content?.stage === 'llm') {
       // LLM 阶段，输出 answer
       const answer = content.answer || '';
@@ -1503,6 +1523,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       // 处理技能调用
       const skillName = item.skill_info?.name;
       const skillNameLower = skillName?.toLowerCase();
+      const progressItem = item as Progress;
+      const consumeTime = this.calculateConsumeTime(progressItem.start_time, progressItem.end_time);
 
       if(item.skill_info?.args?.some((item: any) => item?.name === 'action' && item?.value === 'show_ds')){
         return;
@@ -1529,9 +1551,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         const chartData = this.extractChartDataFromArgs(item.skill_info?.args, item.answer);
         if (chartData) {
           // 将图表数据添加到消息内容中
+          const progressItem = item as Progress;
+          const consumeTime = this.calculateConsumeTime(progressItem.start_time, progressItem.end_time);
           message.content.push({
             type: BlockType.JSON2PLOT,
             content: chartData,
+            consumeTime,
           });
         }
       } else if (skillName === 'execute_code') {
@@ -1547,6 +1572,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
               output: executeCodeResult.output,
               icon: <Text2SqlIcon />,
             },
+            consumeTime,
           });
         }
       } else if (skillName === 'text2sql') {
@@ -1570,6 +1596,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
                 // explanation: text2SqlResult.explanation,
               },
             },
+            consumeTime,
           });
         }
       } else if (skillName === 'text2metric') {
@@ -1587,6 +1614,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
                 data: text2MetricResult.data,
               },
             },
+            consumeTime,
           });
         }
       } else if (skillName === 'af_sailor') {
@@ -1604,6 +1632,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
                 data: afSailorResult.cites,
               },
             },
+            consumeTime,
           });
         }
       } else if (skillName === 'datasource_filter') {
@@ -1621,14 +1650,15 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
                 data: datasourceFilterResult.result,
               },
             },
+            consumeTime,
           });
         }
       } else {
         // 其他技能，显示技能名称
-        message.content.push({
-          type: BlockType.TEXT,
-          content: `调用工具: ${skillName}`,
-        });
+        // message.content.push({
+        //   type: BlockType.TEXT,
+        //   content: `调用工具: ${skillName}`,
+        // });
       }
     } else if (item.stage === 'llm') {
       // LLM 回答

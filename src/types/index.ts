@@ -70,6 +70,8 @@ export interface ContentBlock<T extends BlockType, K> {
   type: T;
   /** 消息块的内容 */
   content: K;
+  /** 耗时（毫秒），可选字段 */
+  consumeTime?: number;
 }
 
 /**

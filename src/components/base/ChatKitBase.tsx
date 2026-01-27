@@ -357,7 +357,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param messageId 消息 ID
    * @param result 代码执行的输入和输出结果
    */
-  protected appendExecuteCodeBlock(messageId: string, result: ExecuteCodeResult): void {
+  protected appendExecuteCodeBlock(messageId: string, result: ExecuteCodeResult, consumeTime?: number): void {
     this.setState((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
@@ -373,6 +373,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
                 input: result.input,
                 output: result.output,
               },
+              consumeTime,
             } as ToolBlock,
           ];
 
@@ -390,8 +391,9 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * 该方法由子类调用，用于在消息中添加 Text2SQL 查询结果
    * @param messageId 消息 ID
    * @param result Text2SQL 的输入和输出结果
+   * @param consumeTime 耗时（毫秒），可选
    */
-  protected appendText2SqlBlock(messageId: string, result: Text2SqlResult): void {
+  protected appendText2SqlBlock(messageId: string, result: Text2SqlResult, consumeTime?: number): void {
   
     this.setState((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
@@ -410,6 +412,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
                   data:result.data
                 },
               },
+              consumeTime,
             } as ToolBlock,
           ];
 
@@ -427,8 +430,9 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * 该方法由子类调用，用于在消息中添加 Text2Metric 查询结果
    * @param messageId 消息 ID
    * @param result Text2Metric 的输入和输出结果
+   * @param consumeTime 耗时（毫秒），可选
    */
-  protected appendText2MetricBlock(messageId: string, result: Text2MetricResult): void {
+  protected appendText2MetricBlock(messageId: string, result: Text2MetricResult, consumeTime?: number): void {
     this.setState((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
@@ -446,6 +450,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
                   data: result.data,
                 },
               },
+              consumeTime,
             } as ToolBlock,
           ];
 
@@ -463,8 +468,9 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     * 该方法由子类调用，用于在消息中添加 JSON2Plot 图表数据
     * @param messageId 消息 ID
     * @param chartData 图表数据 Schema
+    * @param consumeTime 耗时（毫秒），可选
     */
-   protected appendJson2PlotBlock(messageId: string, chartData: ChartDataSchema): void {
+   protected appendJson2PlotBlock(messageId: string, chartData: ChartDataSchema, consumeTime?: number): void {
     this.setState((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
@@ -474,6 +480,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
             {
               type: BlockType.JSON2PLOT,
               content: chartData,
+              consumeTime,
             } as Json2PlotBlock,
           ];
 
@@ -491,8 +498,9 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * 该方法由子类调用，用于在消息中添加 AfSailor 查询结果
    * @param messageId 消息 ID
    * @param result AfSailor 的输入和输出结果
+   * @param consumeTime 耗时（毫秒），可选
    */
-  protected appendAfSailorBlock(messageId: string, result: AfSailorResult): void {
+  protected appendAfSailorBlock(messageId: string, result: AfSailorResult, consumeTime?: number): void {
     this.setState((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
@@ -510,6 +518,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
                   data: result.cites,
                 },
               },
+              consumeTime,
             } as ToolBlock,
           ];
 
@@ -527,8 +536,9 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * 该方法由子类调用，用于在消息中添加 DatasourceFilter 查询结果
    * @param messageId 消息 ID
    * @param result DatasourceFilter 的输入和输出结果
+   * @param consumeTime 耗时（毫秒），可选
    */
-  protected appendDatasourceFilterBlock(messageId: string, result: DatasourceFilterResult): void {
+  protected appendDatasourceFilterBlock(messageId: string, result: DatasourceFilterResult, consumeTime?: number): void {
     this.setState((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
@@ -546,6 +556,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
                   data: result.result,
                 },
               },
+              consumeTime,
             } as ToolBlock,
           ];
 

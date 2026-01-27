@@ -163,6 +163,7 @@ body {
 
 .markdown-body table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin: 0.5rem 0;
   font-size: 0.875rem;
@@ -176,8 +177,10 @@ body {
 .markdown-body table tr td {
   border: 1px solid #e5e7eb;
   padding: 0.5rem;
-  white-space: nowrap;
-  word-break: break-all;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .markdown-body table tr:nth-child(2n) {

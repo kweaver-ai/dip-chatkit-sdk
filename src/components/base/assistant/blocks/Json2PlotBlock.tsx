@@ -72,6 +72,7 @@ const Json2PlotBlock: React.FC<Json2PlotBlockProps> = ({
               data,
             }
           },
+          consumeTime: block.consumeTime,
         }} />
       </div>
       <Json2PlotContentView
