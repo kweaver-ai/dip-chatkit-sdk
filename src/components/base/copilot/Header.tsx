@@ -49,16 +49,16 @@ const Header: React.FC<HeaderProps> = ({
   onDeleteConversation,
 }) => {
   return (
-    <div className="relative h-14 w-full bg-white">
-      <div className="absolute left-[23px] top-3 h-8 w-[440px]">
+    <div className="h-14 w-full bg-white px-[21px] flex items-center">
+      <div className="w-full h-8 flex items-center justify-between">
         {/* Logo 和标题 */}
-        <div className="absolute left-0 top-0 flex items-center h-8">
+        <div className="flex items-center h-8">
           {/* AI 助手图标 */}
           <div className="w-8 h-8">
             <AssistantIcon className="w-8 h-8" />
           </div>
           {/* 标题 */}
-          <div className="absolute left-[40px] top-1/2 -translate-y-1/2">
+          <div className="m-2">
             <p
               className="font-medium text-[18px] leading-4 text-black whitespace-nowrap"
               style={{ fontFamily: 'Noto Sans SC' }}
@@ -69,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* 操作按钮组 - 从右到左：Close -> Expand -> New Chat -> History */}
-        <div className="absolute right-0 top-0 h-8 flex items-center">
+        <div className="h-8 flex items-center">
           {/* 历史记录按钮 */}
           {onGetConversations && onLoadConversation && onDeleteConversation && (
             <div className="relative">
