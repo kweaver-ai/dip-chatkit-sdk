@@ -76,7 +76,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
     // 如果 content 是数组，则渲染 Block 数组
     if (Array.isArray(message.content)) {
       return (
-        <div className="space-y-2">
+        <div className="space-y-[8px]">
           {message.content.map((block, index) => {
             switch (block.type) {
               case BlockType.TEXT:
@@ -105,17 +105,17 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   return (
     <div
-      className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-2 group`}
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-[8px] group`}
     >
       {/* AI 头像 (仅助手消息) */}
       {!isUser && (
-        <div className="w-[21px] h-[21px] mr-2 flex-shrink-0">
+        <div className="w-[21px] h-[21px] mr-[8px] flex-shrink-0">
           <AssistantIcon className="w-[21px] h-[21px]" />
         </div>
       )}
 
       <div
-        className={`flex flex-col gap-2 ${
+        className={`flex flex-col gap-[8px] ${
           isUser ? 'max-w-[calc(100%-30px)]' : 'w-[calc(100%-30px)]'
         }`}
       >
@@ -148,7 +148,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
         {/* 复制按钮和重新生成按钮 */}
         {!isStreaming && hasContent() && (
           <div
-            className={`flex items-center gap-2 ${isUser ? 'justify-end' : 'justify-start'} ${
+            className={`flex items-center gap-[8px] ${isUser ? 'justify-end' : 'justify-start'} ${
               isUser
                 ? 'opacity-0 group-hover:opacity-100 transition-opacity'
                 : ''
@@ -165,7 +165,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                   setTimeout(() => setCopySuccess(false), 1000)
                 }
               }}
-              className="flex items-center justify-center w-[24px] h-[24px] rounded hover:bg-[rgba(0,0,0,0.05)]"
+              className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] hover:bg-[rgba(0,0,0,0.05)]"
               title={copySuccess ? '已复制' : '复制'}
             >
               <CopyIcon

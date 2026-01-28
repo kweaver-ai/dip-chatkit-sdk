@@ -267,7 +267,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           {/* 内容区域 */}
           <div className="max-h-[406px] overflow-y-auto px-[14px] py-[14px]">
             {loading && (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-[48px]">
                 <div
                   className="text-[14px] text-[rgba(0,0,0,0.45)]"
                   style={{ fontFamily: 'Noto Sans SC' }}
@@ -278,7 +278,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             )}
 
             {error && (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-[48px]">
                 <div
                   className="text-[14px] text-red-500"
                   style={{ fontFamily: 'Noto Sans SC' }}
@@ -289,7 +289,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             )}
 
             {!loading && !error && conversations.length === 0 && (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-[48px]">
                 <div
                   className="text-[14px] text-[rgba(0,0,0,0.45)]"
                   style={{ fontFamily: 'Noto Sans SC' }}

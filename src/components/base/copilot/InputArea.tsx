@@ -56,13 +56,13 @@ const InputArea: React.FC<InputAreaProps> = ({
   };
 
   return (
-    <div className="px-5 pb-3 bg-white">
+    <div className="px-[20px] pb-[12px] bg-white">
       {/* 整体输入容器 */}
       <div className="relative h-[112px]">
         {/* 上下文标签 */}
         {context && context.title && (
-          <div className="absolute top-0 left-1 right-1 bg-[rgba(18,110,227,0.04)] rounded-lg px-4 py-2 h-10 flex items-center">
-            <p className="text-[12px] leading-6 text-[rgba(0,0,0,0.85)] truncate" style={{ fontFamily: 'Noto Sans SC' }}>
+          <div className="absolute top-0 left-[4px] right-[4px] bg-[rgba(18,110,227,0.04)] rounded-[8px] px-[16px] py-[8px] h-[40px] flex items-center">
+            <p className="text-[12px] leading-[24px] text-[rgba(0,0,0,0.85)] truncate" style={{ fontFamily: 'Noto Sans SC' }}>
               {context.title}
             </p>
             <button
@@ -71,7 +71,7 @@ const InputArea: React.FC<InputAreaProps> = ({
               title="移除上下文"
             >
               <svg
-                className="w-3 h-3"
+                className="w-[12px] h-[12px]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -89,7 +89,7 @@ const InputArea: React.FC<InputAreaProps> = ({
 
         {/* 输入框容器 */}
         <div
-          className="absolute bg-white border-[1.5px] border-solid border-[#3b9be0] rounded-2xl overflow-hidden"
+          className="absolute bg-white border-[1.5px] border-solid border-[#3b9be0] rounded-[16px] overflow-hidden"
           style={{
             top: context && context.title ? '48px' : '0',
             left: 0,
@@ -106,7 +106,7 @@ const InputArea: React.FC<InputAreaProps> = ({
             onKeyDown={handleKeyDown}
             placeholder="查询任何问题"
             disabled={disabled}
-            className="w-full h-full resize-none px-3 py-3 text-[14px] leading-normal text-black placeholder:text-[rgba(0,0,0,0.25)] focus:outline-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+            className="w-full h-full resize-none px-[12px] py-[12px] text-[14px] leading-normal text-black placeholder:text-[rgba(0,0,0,0.25)] focus:outline-none disabled:bg-gray-50 disabled:cursor-not-allowed"
             style={{ fontFamily: 'Noto Sans, Noto Sans SC, Noto Sans JP, sans-serif' }}
             maxLength={4000}
           />
@@ -116,7 +116,7 @@ const InputArea: React.FC<InputAreaProps> = ({
             // 停止按钮：在接收 AI 流式响应时显示
             <button
               onClick={onStop}
-              className="absolute bottom-3 right-4 w-8 h-8 flex items-center justify-center bg-[#126EE3] hover:bg-[#126EE3] rounded-md transition-colors"
+              className="absolute bottom-[12px] right-[16px] w-[32px] h-[32px] flex items-center justify-center bg-[#126EE3] hover:bg-[#126EE3] rounded-[6px] transition-colors"
               title="停止响应"
             >
               <StopIcon />
@@ -126,7 +126,7 @@ const InputArea: React.FC<InputAreaProps> = ({
             <button
               onClick={onSend}
               disabled={disabled || !value.trim()}
-              className="absolute bottom-3 right-4 w-8 h-8 flex items-center justify-center bg-[#126EE3] hover:bg-[#126EE3] rounded-md transition-colors disabled:opacity-25 disabled:cursor-not-allowed transition-opacity"
+              className="absolute bottom-[12px] right-[16px] w-[32px] h-[32px] flex items-center justify-center bg-[#126EE3] hover:bg-[#126EE3] rounded-md transition-colors disabled:opacity-25 disabled:cursor-not-allowed transition-opacity"
               title={disabled ? '正在发送...' : '发送消息'}
             >
               <SendIcon disabled={disabled || !value.trim()} />

@@ -49,18 +49,18 @@ const Header: React.FC<HeaderProps> = ({
   onDeleteConversation,
 }) => {
   return (
-    <div className="h-14 w-full bg-white px-[21px] flex items-center">
-      <div className="w-full h-8 flex items-center justify-between">
+    <div className="h-[56px] w-full bg-white px-[21px] flex items-center">
+      <div className="w-full h-[32px] flex items-center justify-between">
         {/* Logo 和标题 */}
-        <div className="flex items-center h-8">
+        <div className="flex items-center h-[32px]">
           {/* AI 助手图标 */}
-          <div className="w-8 h-8">
-            <AssistantIcon className="w-8 h-8" />
+          <div className="w-[32px] h-[32px]">
+            <AssistantIcon className="w-[32px] h-[32px]" />
           </div>
           {/* 标题 */}
-          <div className="m-2">
+          <div className="m-[8px]">
             <p
-              className="font-medium text-[18px] leading-4 text-black whitespace-nowrap"
+              className="font-medium text-[18px] leading-[16px] text-black whitespace-nowrap"
               style={{ fontFamily: 'Noto Sans SC' }}
             >
               {title}
@@ -69,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* 操作按钮组 - 从右到左：Close -> Expand -> New Chat -> History */}
-        <div className="h-8 flex items-center">
+        <div className="h-[32px] flex items-center">
           {/* 历史记录按钮 */}
           {onGetConversations && onLoadConversation && onDeleteConversation && (
             <div className="relative">
@@ -84,7 +84,7 @@ const Header: React.FC<HeaderProps> = ({
           {onNewChat && (
             <button
               onClick={onNewChat}
-              className="ml-3 w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
+              className="ml-[12px] w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
               title="新建会话"
             >
               <NewIcon className="w-[14px] h-[14px]" />
@@ -95,7 +95,7 @@ const Header: React.FC<HeaderProps> = ({
           {onExpand && (
             <button
               onClick={onExpand}
-              className="ml-3 w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
+              className="ml-[12px] w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
               title="展开"
             >
               <ExpandIcon className="w-[14px] h-[13px]" />
@@ -106,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({
           {onClose && (
             <button
               onClick={onClose}
-              className="ml-3 w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
+              className="ml-[12px] w-[16px] h-[16px] flex items-center justify-center text-[rgba(0,0,0,0.65)]  hover:text-[rgba(0,0,0,1)] transition-opacity"
               title="关闭"
             >
               <CloseIcon />

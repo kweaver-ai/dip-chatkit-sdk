@@ -26,7 +26,7 @@ const WebSearchBlock: React.FC<WebSearchBlockProps> = ({ block }) => {
       title: `联网搜索：${input}`,
       icon: (
         <svg
-          className="w-5 h-5 text-blue-600"
+          className="w-[20px] h-[20px] text-blue-600"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

@@ -53,7 +53,7 @@ const Prologue: React.FC<PrologueProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-4 px-6 pt-28 pb-4">
+    <div className="flex flex-col gap-[16px] px-[24px] pt-[112px] pb-[16px]">
       {/* 欢迎语 */}
       <p
         className="leading-[17px]"
@@ -63,12 +63,12 @@ const Prologue: React.FC<PrologueProps> = ({
       </p>
 
       {/* 推荐问题列表 */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-[12px]">
         {questions.map((question, index) => (
           <button
             key={index}
             onClick={() => handleQuestionClick(question)}
-            className="w-full bg-white border border-[rgba(0,0,0,0.1)] rounded-[6px] px-3 py-2 text-left text-[14px] leading-6 text-black hover:border-[#3b9be0] hover:bg-[rgba(18,110,227,0.04)] transition-all"
+            className="w-full bg-white border border-[rgba(0,0,0,0.1)] rounded-[6px] px-[12px] py-[8px] text-left text-[14px] leading-[24px] text-black hover:border-[#3b9be0] hover:bg-[rgba(18,110,227,0.04)] transition-all"
             style={{ fontFamily: 'Noto Sans SC' }}
           >
             {question}

@@ -47,7 +47,7 @@ const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
         <img
           src={displayIcon}
           alt={name}
-          className="w-5 h-5 flex-shrink-0"
+          className="w-[20px] h-[20px] flex-shrink-0"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
           }}
@@ -56,7 +56,7 @@ const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
     }
 
     // 如果是 React 元素，直接渲染
-    return <div className="w-5 h-5 flex-shrink-0">{displayIcon}</div>;
+    return <div className="w-[20px] h-[20px] flex-shrink-0">{displayIcon}</div>;
   };
 
   /**
@@ -79,13 +79,13 @@ const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
   return (
     <>
       {/* 工具块主体 */}
-      <div className="tool-block bg-white border border-[#d9d9d9] rounded-[6px] my-2">
+      <div className="tool-block bg-white border border-[#d9d9d9] rounded-[6px] my-[8px]">
         <div
-          className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
+          className="flex items-center justify-between px-[12px] py-[8px] cursor-pointer hover:bg-gray-50 transition-colors"
           onClick={handleClick}
         >
           {/* 左侧：图标 + 标题 */}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex items-center gap-[12px] flex-1 min-w-0">
             {renderIcon()}
             <span className="text-sm text-[rgba(0,0,0,0.65)] truncate">
               {title}
@@ -93,9 +93,9 @@ const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
           </div>
 
           {/* 右侧：箭头图标 */}
-          <div className="flex items-center justify-center w-4 h-4 flex-shrink-0">
+          <div className="flex items-center justify-center w-[16px] h-[16px] flex-shrink-0">
             <svg
-              className="w-4 h-4 text-gray-400"
+              className="w-[16px] h-[16px] text-gray-400"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"

@@ -7,7 +7,7 @@ html,
 body {
   font-size: 14px;
   line-height: 22px;
-  color: rgb(0, 0, 0, 0.85);
+  color: rgba(0, 0, 0, 0.85);
 }
 
 /* 自定义滚动条样式 */
@@ -121,13 +121,13 @@ body {
   color: #4b5563;
   border-left: 4px solid #e5e7eb;
   background-color: inherit;
-  margin: 0.5rem 0;
+  margin: 8px 0;
 }
 
 .markdown-body ul,
 .markdown-body ol {
   padding-inline-start: 2em;
-  margin: 0.25rem 0 0.5rem;
+  margin: 4px 0 8px;
   color: var(--markdown-base-font-color, rgba(0, 0, 0, 0.85));
 }
 
@@ -165,8 +165,8 @@ body {
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
-  margin: 0.5rem 0;
-  font-size: 0.875rem;
+  margin: 8px 0;
+  font-size: 14px;
 }
 
 .markdown-body table tr {
@@ -176,7 +176,7 @@ body {
 .markdown-body table tr th,
 .markdown-body table tr td {
   border: 1px solid #e5e7eb;
-  padding: 0.5rem;
+  padding: 8px;
   white-space: normal;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -196,14 +196,14 @@ body {
 }
 
 .markdown-body pre {
-  margin: 0.5rem 0;
+  margin: 8px 0;
 }
 
 .markdown-body pre code {
   display: block;
   padding: 1em;
   overflow-x: auto;
-  border-radius: 0.375rem;
+  border-radius: 6px;
   background: #f8f8f8;
   line-height: 1.6;
 }
@@ -212,7 +212,7 @@ body {
 .hljs {
   display: block;
   overflow-x: auto;
-  padding: 0.5em;
+  padding: 8px;
   color: #333;
   background: #f8f8f8;
 }
@@ -344,14 +344,14 @@ body {
 /* 代码块容器样式 */
 pre code.hljs {
   display: block;
-  padding: 1rem;
+  padding: 16px;
   overflow-x: auto;
-  border-radius: 0.375rem;
+  border-radius: 6px;
 }
 
 pre.hljs {
-  padding: 1rem;
-  border-radius: 0.375rem;
+  padding: 16px;
+  border-radius: 6px;
   background: #f8f8f8;
 }
 
