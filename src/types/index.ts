@@ -305,6 +305,30 @@ export interface DatasourceFilterResult {
 }
 
 /**
+ * DatasourceRerank 结果接口
+ * DatasourceRerank 工具的输入和输出信息，与 DatasourceFilter 处理方式一致
+ */
+export interface DatasourceRerankResult {
+  /** 数据目录重排结果列表 */
+  result: DataCatalogMatch[];
+  /** 结果缓存key */
+  result_cache_key?: string;
+}
+
+/**
+ * 默认工具结果接口
+ * 对应 ChatKit.pdf 4.32 DefaultToolResult
+ */
+export interface DefaultToolResult {
+  /** 工具标题 */
+  title: string;
+  /** 输入参数 */
+  input: Record<string, any>;
+  /** 输出结果 */
+  output: Record<string, any>;
+}
+
+/**
  * 工具调用数据接口
  * 工具调用的输入和输出信息
  */
@@ -388,7 +412,7 @@ export interface ChatKitInterface {
   /**
    * 将 API 接口返回的 EventStream 增量解析成完整的 AssistantMessage 对象
    * 当接收到 SSE 消息时触发，该方法需要由子类实现
-   * 子类在该方法中应该调用 appendMarkdownBlock() 或 appendWebSearchBlock() 来更新消息内容
+   * 子类在该方法中应该调用 appendMarkdownBlock()、appendWebSearchBlock()、appendToolBlock() 等来更新消息内容
    * 注意：该方法应该只处理数据解析逻辑，通过调用 append*Block 方法来更新界面
    * @param eventMessage 接收到的一条 Event Message
    * @param prev 上一次增量更新后的 AssistantMessage 对象

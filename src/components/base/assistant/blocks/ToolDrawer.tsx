@@ -583,15 +583,18 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
         </div>
       );
     }
+    // 默认工具处理方式：统一使用 CodeViewTool 展示输入（按 JSON 文本渲染）
     return (
       <div className="h-full flex flex-col">
         <h3 className="text-sm font-bold text-gray-900 mb-3">输入</h3>
-        <div className="flex-1 overflow-y-auto">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words font-mono">
-              {formatData(input)}
-            </pre>
-          </div>
+        <div className="flex-1 overflow-hidden">
+          <CodeViewTool
+            code={formatData(input)}
+            language="json"
+            width="100%"
+            height="100%"
+            className="border border-gray-200 rounded-lg"
+          />
         </div>
       </div>
     );
@@ -626,15 +629,18 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
       return renderJson2PlotOutput(output);
     }
 
+    // 默认工具处理方式：统一使用 CodeViewTool 展示输出（按 JSON 文本渲染）
     return (
       <div className="h-full flex flex-col">
         <h3 className="text-sm font-bold text-gray-900 mb-3">输出</h3>
-        <div className="flex-1 overflow-y-auto">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words font-mono">
-              {formatData(output)}
-            </pre>
-          </div>
+        <div className="flex-1 overflow-hidden">
+          <CodeViewTool
+            code={formatData(output)}
+            language="json"
+            width="100%"
+            height="100%"
+            className="border border-gray-200 rounded-lg"
+          />
         </div>
       </div>
     );

@@ -127,8 +127,8 @@ export abstract class CopilotBase<P extends ChatKitBaseProps = ChatKitBaseProps>
             onDeleteConversation={this.handleDeleteConversation}
           />
 
-          {/* 消息列表区域或欢迎界面 */}
-          <div className="flex-1 overflow-y-auto">
+          {/* 消息列表区域或欢迎界面；min-h-0 保证 flex 子项可收缩，避免虚拟列表/滚动条溢出 */}
+          <div className={`flex-1 min-h-0 ${showPrologue ? 'overflow-y-auto' : 'overflow-hidden'}`}>
             {showPrologue ? (
               isLoadingOnboarding ? (
                 // 加载中，显示加载提示
