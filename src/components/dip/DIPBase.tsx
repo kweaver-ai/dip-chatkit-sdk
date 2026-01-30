@@ -8,6 +8,7 @@ import {
   ChartDataSchema,
   ConversationHistory,
   BlockType,
+  DefaultToolResult,
 } from '../../types';
 import { Constructor } from '../../utils/mixins';
 import { Text2SqlIcon, Text2MetricIcon, AfSailorIcon } from '../icons';
@@ -1017,9 +1018,23 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       if (datasourceFilterResult) {
         (this as any).appendDatasourceFilterBlock(messageId, datasourceFilterResult, consumeTime);
       }
+    } else if (skillName === 'datasource_rerank') {
+      // DatasourceRerank 工具：解析数据源重排结果，与 datasource_filter 处理方式一致
+      const datasourceRerankResult = this.extractDatasourceRerankResult(skillInfo.args, answer);
+      if (datasourceRerankResult) {
+        (this as any).appendDatasourceRerankBlock(messageId, datasourceRerankResult, consumeTime);
+      }
     } else {
-      // 其他技能：输出技能名称
-      // (this as any).appendMarkdownBlock(messageId, `调用工具: ${skillName}`);
+      // 默认工具处理逻辑：没有特殊处理的工具统一走 DefaultTool
+      const defaultTool = this.buildDefaultToolResult(skillInfo, answer);
+      if (defaultTool) {
+        (this as any).appendDefaultToolBlock(
+          messageId,
+          defaultTool.toolName,
+          defaultTool.result,
+          consumeTime,
+        );
+      }
     }
   }
 
@@ -1510,6 +1525,42 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
   }
 
   /**
+   * 从 skill_info.args 和 answer 中提取 DatasourceRerank 结果
+   * 用于处理 datasource_rerank 工具的输入和输出，与 datasource_filter 处理方式一致
+   * 根据 OpenAPI 规范，DatasourceRerankResult 包含 result（DataCatalogMatch[]）及 result_cache_key
+   * @param _args skill_info.args 数组，包含查询参数（当前未使用，保留以保持接口一致性）
+   * @param answer 技能执行的 answer 字段，包含数据源重排结果
+   * @returns DatasourceRerankResult 对象，包含 result、result_cache_key 等信息
+   */
+  public extractDatasourceRerankResult(
+    _args: Array<{name?: string; type?: string; value?: string}> | undefined,
+    answer: any
+  ): { result: Array<any>; result_cache_key?: string } | null {
+    try {
+      const resultData = answer?.result;
+
+      if (!resultData) {
+        return null;
+      }
+
+      const result = resultData?.result || [];
+      const result_cache_key = resultData?.result_cache_key;
+
+      if (!Array.isArray(result) || result.length === 0) {
+        return null;
+      }
+
+      return {
+        result: result,
+        result_cache_key,
+      };
+    } catch (e) {
+      console.error('提取 DatasourceRerank 结果失败:', e);
+      return null;
+    }
+  }
+
+  /**
    * 将技能调用或 LLM 回答的内容追加到消息中
    * 用于历史消息解析，根据 stage 和 skill_info 将内容添加到 ChatMessage.content 数组
    * @param item Progress 或 OtherTypeAnswer 对象
@@ -1653,12 +1704,40 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             consumeTime,
           });
         }
+      } else if (skillName === 'datasource_rerank') {
+        // DatasourceRerank 工具，与 datasource_filter 处理方式一致
+        const datasourceRerankResult = this.extractDatasourceRerankResult(item.skill_info?.args, item.answer);
+        if (datasourceRerankResult) {
+          message.content.push({
+            type: BlockType.TOOL,
+            content: {
+              name: 'datasource_rerank',
+              title: `重排匹配到${datasourceRerankResult?.result?.length || 0}个数据`,
+              input: [],
+              icon: <AfSailorIcon />,
+              output: {
+                data: datasourceRerankResult.result,
+              },
+            },
+            consumeTime,
+          });
+        }
       } else {
-        // 其他技能，显示技能名称
-        // message.content.push({
-        //   type: BlockType.TEXT,
-        //   content: `调用工具: ${skillName}`,
-        // });
+        // 默认工具：统一走 DefaultToolResult 结构，使用 ToolBlock 渲染
+        const defaultTool = this.buildDefaultToolResult(item.skill_info, item.answer);
+        if (defaultTool) {
+          message.content.push({
+            type: BlockType.TOOL,
+            content: {
+              name: defaultTool.toolName,
+              icon: <Text2SqlIcon />,
+              title: defaultTool.result.title,
+              input: defaultTool.result.input,
+              output: defaultTool.result.output,
+            },
+            consumeTime,
+          });
+        }
       }
     } else if (item.stage === 'llm') {
       // LLM 回答
@@ -1669,6 +1748,51 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         });
       }
     }
+  }
+
+  /**
+   * 构造默认工具结果
+   * 对应设计文档 4.32 DefaultToolResult 及默认工具处理逻辑
+   */
+  public buildDefaultToolResult(
+    skillInfo: SkillInfo | undefined,
+    answer: any,
+  ): { toolName: string; result: DefaultToolResult } | null {
+    if (!skillInfo?.name) {
+      return null;
+    }
+
+    const toolName = skillInfo.name;
+    const args = skillInfo.args || [];
+
+    // 将 args 转为 Record<string, any>
+    const input: Record<string, any> = {};
+    for (const arg of args) {
+      if (arg?.name) {
+        input[arg.name] = arg.value;
+      }
+    }
+
+    const answerObj = answer || {};
+    const output = answerObj?.result ?? answerObj?.full_result ?? answerObj;
+
+    // 标题优先级：args 中的 input/query -> output.title -> answer.title -> 工具名
+    const titleArg = args.find(
+      (arg) => arg?.name === 'input' || arg?.name === 'query',
+    );
+    let title =
+      (titleArg?.value as string) ||
+      (typeof output?.title === 'string' ? output.title : '') ||
+      (typeof answerObj?.title === 'string' ? answerObj.title : '') ||
+      toolName;
+
+    const result: DefaultToolResult = {
+      title,
+      input,
+      output,
+    };
+
+    return { toolName, result };
   }
 
   /**

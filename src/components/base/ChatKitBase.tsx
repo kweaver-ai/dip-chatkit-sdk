@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, Text2MetricResult, AfSailorResult, DatasourceFilterResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock } from '../../types';
+import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, Text2MetricResult, AfSailorResult, DatasourceFilterResult, DatasourceRerankResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock, DefaultToolResult } from '../../types';
 import { Text2SqlIcon, Text2MetricIcon, AfSailorIcon } from '../icons';
 
 /**
@@ -555,6 +555,85 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
                 output: {
                   data: result.result,
                 },
+              },
+              consumeTime,
+            } as ToolBlock,
+          ];
+
+          return { ...msg, content: newContent };
+        }
+        return msg;
+      });
+
+      return { messages: newMessages };
+    });
+  }
+
+  /**
+   * 添加 DatasourceRerank 工具类型的消息块
+   * 该方法由子类调用，用于在消息中添加 DatasourceRerank 查询结果，与 datasource_filter 处理方式一致
+   * @param messageId 消息 ID
+   * @param result DatasourceRerank 的输入和输出结果
+   * @param consumeTime 耗时（毫秒），可选
+   */
+  protected appendDatasourceRerankBlock(messageId: string, result: DatasourceRerankResult, consumeTime?: number): void {
+    this.setState((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId === messageId) {
+          // 添加 DatasourceRerank 工具块
+          const newContent = [
+            ...msg.content,
+            {
+              type: BlockType.TOOL,
+              content: {
+                name: 'datasource_rerank',
+                title: `重排匹配到${result?.result?.length || 0}个数据`,
+                icon: <AfSailorIcon />,
+                input: [],
+                output: {
+                  data: result.result,
+                },
+              },
+              consumeTime,
+            } as ToolBlock,
+          ];
+
+          return { ...msg, content: newContent };
+        }
+        return msg;
+      });
+
+      return { messages: newMessages };
+    });
+  }
+
+  /**
+   * 添加默认工具类型的消息块
+   * 用于那些没有单独渲染逻辑的通用工具
+   * @param messageId 消息 ID
+   * @param toolName 工具名称（skill_name）
+   * @param result 默认工具的输入输出结果
+   * @param consumeTime 耗时（毫秒），可选
+   */
+  protected appendDefaultToolBlock(
+    messageId: string,
+    toolName: string,
+    result: DefaultToolResult,
+    consumeTime?: number
+  ): void {
+    this.setState((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId === messageId) {
+          const newContent = [
+            ...msg.content,
+            {
+              type: BlockType.TOOL,
+              content: {
+                name: toolName,
+                icon: <Text2SqlIcon />,
+                title: result.title,
+                input: result.input,
+                output: result.output,
               },
               consumeTime,
             } as ToolBlock,

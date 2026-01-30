@@ -38,6 +38,7 @@ const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
    * 渲染工具图标
    */
   const renderIcon = () => {
+    console.log('displayIcon', displayIcon);
     if (!displayIcon) {
       return null;
     }

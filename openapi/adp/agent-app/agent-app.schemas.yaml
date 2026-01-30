@@ -163,6 +163,7 @@ components:
             - $ref: '#/components/schemas/ExecuteCodeResult'
             - $ref: '#/components/schemas/AfSailorResult'
             - $ref: '#/components/schemas/DatasourceFilterResult'
+            - $ref: '#/components/schemas/KnSearchResult'
         skill_info:
           $ref: "#/components/schemas/SkillInfo"
         interrupted:
@@ -231,6 +232,7 @@ components:
           - $ref: "#/components/schemas/Text2MetricResult"
           - $ref: "#/components/schemas/AfSailorResult"
           - $ref: "#/components/schemas/DatasourceFilterResult"
+          - $ref: "#/components/schemas/KnSearchResult"
         think:
           type: string
           description: 执行步骤中的思考过程
@@ -323,6 +325,7 @@ components:
       - $ref: "#/components/schemas/Text2MetricResult"
       - $ref: "#/components/schemas/AfSailorResult"
       - $ref: "#/components/schemas/DatasourceFilterResult"
+      - $ref: "#/components/schemas/KnSearchResult"
     
     TokenUsage:
       type: object
@@ -902,6 +905,75 @@ components:
         result_cache_key:
           type: string
           description: 结果缓存key
+
+    KnSearchResult:
+      type: object
+      description: kn_search工具的返回结果
+      properties:
+        result:
+          $ref: "#/components/schemas/KnSearchResultData"
+
+    KnSearchResultData:
+      type: object
+      description: kn_search工具的结果数据
+      properties:
+        object_types:
+          type: array
+          description: 知识网络中的对象类型列表
+          items:
+            $ref: "#/components/schemas/ObjectType"
+        relation_types:
+          type: array
+          description: 对象类型之间的关系类型列表
+          items:
+            $ref: "#/components/schemas/KnowledgeRelationType"
+        action_types:
+          type: array
+          description: 动作类型列表（预留字段）
+          items:
+            type: string
+        nodes:
+          type: array
+          description: 匹配到的知识网络节点列表
+          items:
+            $ref: "#/components/schemas/KnowledgeNode"
+
+    KnowledgeRelationType:
+      type: object
+      description: 知识网络关系类型
+      properties:
+        concept_id:
+          type: string
+          description: 关系概念 ID
+        concept_name:
+          type: string
+          description: 关系概念名称
+        source_object_type_id:
+          type: string
+          description: 源对象类型 ID
+        target_object_type_id:
+          type: string
+          description: 目标对象类型 ID
+
+    KnowledgeNode:
+      type: object
+      description: 知识网络中的节点
+      properties:
+        object_type_id:
+          type: string
+          description: 节点所属的对象类型 ID
+        unique_identities:
+          type: object
+          description: 唯一标识字段集合
+          additionalProperties: true
+        data_properties:
+          type: object
+          description: 节点的数据属性集合
+          additionalProperties: true
+        final_score:
+          type: number
+          format: float
+          description: 节点匹配得分
 
     DatasourceFilterBlockAnswer:
       type: object
