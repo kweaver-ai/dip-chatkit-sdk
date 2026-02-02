@@ -151,6 +151,13 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     /** DIP 刷新 token 的方法 */
     public dipRefreshToken?: () => Promise<string>;
 
+    /** LeftHeaderTool 使用的 API 方法（构造时缓存，避免流式消息时重复创建） */
+    public _leftHeaderApiMethods?: {
+      getKnowledgeNetworksDetail: (id: string) => Promise<any>;
+      getKnowledgeNetworkObjectTypes: (id: string, offset?: number, limit?: number) => Promise<any>;
+      getMetricInfoByIds: (ids: string[]) => Promise<any[]>;
+    };
+
     constructor(...args: any[]) {
       super(...args);
 
@@ -170,6 +177,13 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         // bearerToken 包含 "Bearer " 前缀，需要移除
         this.dipToken = props.bearerToken.replace(/^Bearer\s+/i, '');
       }
+
+      // 缓存 LeftHeaderTool 的 API 方法引用，避免流式消息时每次 render 创建新对象导致子组件 useEffect 重复执行
+      this._leftHeaderApiMethods = {
+        getKnowledgeNetworksDetail: this.getKnowledgeNetworksDetail.bind(this),
+        getKnowledgeNetworkObjectTypes: this.getKnowledgeNetworkObjectTypes.bind(this),
+        getMetricInfoByIds: this.getMetricInfoByIds.bind(this),
+      };
     }
 
     /**
@@ -463,14 +477,17 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         typeof k === 'string' && (k === 'assistant_message' || k.startsWith('assistant_message'))
       );
       
-      // 初始化 AssistantMessage 对象（如果不存在）
+      // 初始化或按路径不可变更新，避免每事件全量深拷贝（大对象时会导致卡顿）
+      const isInit = hasAssistantMessage && (!prev || Object.keys(prev as any).length === 0);
+      if (isInit) console.log('初始化 AssistantMessage 对象，key:', key);
+      const base = isInit ? ({} as AssistantMessage) : (prev || {}) as AssistantMessage;
       let assistantMessage: AssistantMessage;
-      if (hasAssistantMessage && (!prev || Object.keys(prev as any).length === 0)) {
-        console.log('初始化 AssistantMessage 对象，key:', key);
-        assistantMessage = {};
+      if (em.action === 'upsert') {
+        assistantMessage = this.immutableApplyUpsert(base, key, em.content);
+      } else if (em.action === 'append') {
+        assistantMessage = this.immutableApplyAppend(base, key, em.content);
       } else {
-        // 克隆 prev 对象以避免直接修改
-        assistantMessage = JSON.parse(JSON.stringify(prev || {}));
+        assistantMessage = base;
       }
 
       // 检查是否在白名单中
@@ -480,14 +497,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       if (!whitelistEntry) {
         // 不在白名单中，跳过处理，但仍需检查并同步更新 messageId
         console.log('跳过非白名单事件:', em.action, jsonPath);
-        
-        // 即使不在白名单中，也要保证 AssistantMessage.message.id 和 ChatMessage.messageId 保持一致
-        // 注意：这里需要先处理 content，因为可能更新了 assistantMessage.message.id
-        const processedAssistantMessage = em.action === 'upsert' 
-          ? this.applyUpsert(assistantMessage, key, em.content)
-          : em.action === 'append'
-          ? this.applyAppend(assistantMessage, key, em.content)
-          : assistantMessage;
+        const processedAssistantMessage = assistantMessage;
         
         const assistantMessageId = processedAssistantMessage.message?.id;
         if (assistantMessageId && assistantMessageId !== messageId) {
@@ -512,12 +522,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         return processedAssistantMessage as K;
       }
 
-      // 根据 action 处理 content
-      if (em.action === 'upsert') {
-        assistantMessage = this.applyUpsert(assistantMessage, key, em.content);
-      } else if (em.action === 'append') {
-        assistantMessage = this.applyAppend(assistantMessage, key, em.content);
-      }
+      // assistantMessage 已在上面通过不可变更新得到，此处无需再次 apply
 
       // 保证 AssistantMessage.message.id 和 ChatMessage.messageId 保持一致
       // 在处理完 AssistantMessage 后，检查并同步更新 ChatMessage.messageId
@@ -665,6 +670,10 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     // 对于数组索引的情况，使用正则匹配
     const progressArrayPattern = /^message\.content\.middle_answer\.progress\[\d+\]$/;
     const progressArrayAnswerPattern = /^message\.content\.middle_answer\.progress\[\d+\]\.answer$/;
+    // 流式工具（如 contextloader_data_enhanced）通过 append progress[N].answer.answer 下发片段，需用已组装结果更新工具块
+    const progressAnswerAnswerPattern = /^message\.content\.middle_answer\.progress\[(\d+)\]\.answer\.answer$/;
+    // 流式工具整块 upsert progress[N].answer 时，用最新 answer 更新工具块
+    const progressAnswerUpsertPattern = /^message\.content\.middle_answer\.progress\[(\d+)\]\.answer$/;
 
     if (action === 'append' && progressArrayPattern.test(jsonPath)) {
       return entries['append:message.content.middle_answer.progress'];
@@ -680,6 +689,42 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             if (lastProgress.stage === 'llm') {
               const answer = lastProgress.answer || '';
               (this as any).appendMarkdownBlock(messageId, answer);
+            }
+          }
+        },
+      };
+    }
+
+    // 流式工具 answer 的字符串追加：用当前 progress[N] 的完整 answer 更新对应工具块，保证最终是流式组装后的数据
+    const progressAnswerAnswerMatch = action === 'append' && jsonPath.match(progressAnswerAnswerPattern);
+    if (progressAnswerAnswerMatch) {
+      const progressIndex = parseInt(progressAnswerAnswerMatch[1], 10);
+      return {
+        postProcess: (assistantMessage, _content, messageId) => {
+          const progress = assistantMessage.message?.content?.middle_answer?.progress || [];
+          const item = progress[progressIndex];
+          if (item?.stage === 'skill' && item?.skill_info?.name === 'contextloader_data_enhanced') {
+            const defaultTool = this.buildDefaultToolResult(item.skill_info, item.answer);
+            if (defaultTool) {
+              (this as any).updateDefaultToolBlockResult(messageId, defaultTool.toolName, defaultTool.result);
+            }
+          }
+        },
+      };
+    }
+
+    // 流式工具整块 upsert progress[N].answer 时，用最新 answer 更新工具块（如 seq 417 一次性写入整块）
+    const progressAnswerUpsertMatch = action === 'upsert' && jsonPath.match(progressAnswerUpsertPattern);
+    if (progressAnswerUpsertMatch) {
+      const progressIndex = parseInt(progressAnswerUpsertMatch[1], 10);
+      return {
+        postProcess: (assistantMessage, _content, messageId) => {
+          const progress = assistantMessage.message?.content?.middle_answer?.progress || [];
+          const item = progress[progressIndex];
+          if (item?.stage === 'skill' && item?.skill_info?.name === 'contextloader_data_enhanced' && item.answer != null) {
+            const defaultTool = this.buildDefaultToolResult(item.skill_info, item.answer);
+            if (defaultTool) {
+              (this as any).updateDefaultToolBlockResult(messageId, defaultTool.toolName, defaultTool.result);
             }
           }
         },
@@ -1873,6 +1918,65 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
     const lastKey = key[key.length - 1];
     current[lastKey] = value;
+  }
+
+  /**
+   * 按路径不可变设置：只克隆从根到 key 路径上的节点，其余引用复用，避免全量深拷贝大对象
+   */
+  public immutableSetNested(obj: any, key: Array<string | number>, value: any): any {
+    if (key.length === 0) return obj;
+    const k = key[0];
+    if (key.length === 1) {
+      if (obj == null) return value;
+      if (Array.isArray(obj)) {
+        const arr = [...obj];
+        arr[k as number] = value;
+        return arr;
+      }
+      return { ...obj, [k]: value };
+    }
+    const rest = key.slice(1);
+    const child = obj != null ? obj[k] : undefined;
+    const newChild = this.immutableSetNested(child, rest, value);
+    if (obj == null) {
+      if (typeof k === 'number') {
+        const arr: any[] = [];
+        arr[k] = newChild;
+        return arr;
+      }
+      return { [k]: newChild };
+    }
+    if (Array.isArray(obj)) {
+      const arr = [...obj];
+      arr[k as number] = newChild;
+      return arr;
+    }
+    return { ...obj, [k]: newChild };
+  }
+
+  /**
+   * 不可变 upsert：按路径更新，不深拷贝整棵树
+   */
+  public immutableApplyUpsert(obj: AssistantMessage, key: Array<string | number>, content: any): AssistantMessage {
+    if (key.length === 0) return obj;
+    return this.immutableSetNested(obj, key, content) as AssistantMessage;
+  }
+
+  /**
+   * 不可变 append：按路径追加后按路径更新，不深拷贝整棵树
+   */
+  public immutableApplyAppend(obj: AssistantMessage, key: Array<string | number>, content: any): AssistantMessage {
+    if (key.length === 0) return obj;
+    const lastKey = key[key.length - 1];
+    let newValue: any;
+    if (typeof lastKey === 'number') {
+      newValue = content;
+    } else {
+      const current = this.getNestedProperty(obj, key);
+      newValue =
+        typeof current === 'string' && typeof content === 'string' ? current + content : content;
+    }
+    return this.immutableSetNested(obj, key, newValue) as AssistantMessage;
   }
 
   /**

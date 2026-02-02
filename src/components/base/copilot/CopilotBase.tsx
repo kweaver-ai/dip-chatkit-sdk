@@ -1,9 +1,23 @@
 import { ChatKitBase, ChatKitBaseProps, ChatKitBaseState } from '../ChatKitBase';
+import { DrawerPortalProvider } from '../DrawerPortalContext';
+import { ToolBlockProvider } from '../ToolBlockContext';
 import MessageList from './MessageList';
 import InputArea from './InputArea';
 import Header from './Header';
 import Prologue from './Prologue';
 import { ChatMessage, BlockType } from '../../../types';
+
+/**
+ * CopilotBase 组件的属性接口
+ * 扩展 ChatKitBaseProps，支持抽屉 Portal 挂载节点配置
+ */
+export interface CopilotBaseProps extends ChatKitBaseProps {
+  /**
+   * ToolDrawer Portal 挂载的 DOM 节点（可选）。
+   * 不传时抽屉挂到 document.getElementById('root') ?? document.body，避免虚拟滚动影响定位
+   */
+  drawerContainer?: HTMLElement | null;
+}
 
 /**
  * CopilotBase 组件的状态接口
@@ -19,7 +33,7 @@ export interface CopilotBaseState extends ChatKitBaseState {
  * 该类继承自 ChatKitBase，实现了 Copilot 模式的交互界面和交互逻辑
  * 区别于 AssistantBase，CopilotBase 在 render() 函数中渲染 Copilot 模式的界面
  */
-export abstract class CopilotBase<P extends ChatKitBaseProps = ChatKitBaseProps> extends ChatKitBase<P> {
+export abstract class CopilotBase<P extends CopilotBaseProps = CopilotBaseProps> extends ChatKitBase<P> {
   /**
    * 组件状态，包含历史对话显示状态
    */
@@ -109,68 +123,71 @@ export abstract class CopilotBase<P extends ChatKitBaseProps = ChatKitBaseProps>
       return null;
     }
 
-    const { title = 'Copilot', onClose } = this.props;
+    const { title = 'Copilot', onClose, drawerContainer } = this.props;
     const { messages, textInput, applicationContext, isSending, onboardingInfo, isLoadingOnboarding, streamingMessageId } = this.state;
     const showPrologue = messages.length === 0;
     const isStreaming = streamingMessageId !== null;
 
     return (
-      <>
-        <div className="flex flex-col h-full w-full bg-white shadow-2xl">
-          {/* 头部 */}
-          <Header
-            title={title}
-            onClose={onClose}
-            onNewChat={this.createConversation}
-            onGetConversations={this.handleGetConversations}
-            onLoadConversation={this.handleLoadConversation}
-            onDeleteConversation={this.handleDeleteConversation}
-          />
+      <DrawerPortalProvider value={drawerContainer ?? null}>
+        <ToolBlockProvider>
+        <>
+          <div className="flex flex-col h-full w-full bg-white shadow-2xl">
+            {/* 头部 */}
+            <Header
+              title={title}
+              onClose={onClose}
+              onNewChat={this.createConversation}
+              onGetConversations={this.handleGetConversations}
+              onLoadConversation={this.handleLoadConversation}
+              onDeleteConversation={this.handleDeleteConversation}
+            />
 
-          {/* 消息列表区域或欢迎界面；min-h-0 保证 flex 子项可收缩，避免虚拟列表/滚动条溢出 */}
-          <div className={`flex-1 min-h-0 ${showPrologue ? 'overflow-y-auto' : 'overflow-hidden'}`}>
-            {showPrologue ? (
-              isLoadingOnboarding ? (
-                // 加载中，显示加载提示
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
-                    <p className="text-sm text-gray-500">正在加载...</p>
+            {/* 消息列表区域或欢迎界面；min-h-0 保证 flex 子项可收缩，避免虚拟列表/滚动条溢出 */}
+            <div className={`flex-1 min-h-0 ${showPrologue ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+              {showPrologue ? (
+                isLoadingOnboarding ? (
+                  // 加载中，显示加载提示
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+                      <p className="text-sm text-gray-500">正在加载...</p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  // 加载完成，显示开场白
+                  <Prologue
+                    onQuestionClick={this.handleQuestionClick}
+                    prologue={onboardingInfo?.prologue}
+                    predefinedQuestions={onboardingInfo?.predefinedQuestions}
+                  />
+                )
               ) : (
-                // 加载完成，显示开场白
-                <Prologue
-                  onQuestionClick={this.handleQuestionClick}
-                  prologue={onboardingInfo?.prologue}
-                  predefinedQuestions={onboardingInfo?.predefinedQuestions}
+                <MessageList 
+                  messages={messages} 
+                  streamingMessageId={streamingMessageId}
+                  onRegenerate={this.handleRegenerate}
                 />
-              )
-            ) : (
-              <MessageList 
-                messages={messages} 
-                streamingMessageId={streamingMessageId}
-                onRegenerate={this.handleRegenerate}
-              />
-            )}
+              )}
+            </div>
+
+            {/* 输入区域 */}
+            <InputArea
+              value={textInput}
+              onChange={this.setTextInput}
+              onSend={this.handleSend}
+              context={applicationContext}
+              onRemoveContext={this.removeApplicationContext}
+              disabled={isSending}
+              isStreaming={isStreaming}
+              onStop={this.handleStop}
+            />
           </div>
 
-          {/* 输入区域 */}
-          <InputArea
-            value={textInput}
-            onChange={this.setTextInput}
-            onSend={this.handleSend}
-            context={applicationContext}
-            onRemoveContext={this.removeApplicationContext}
-            disabled={isSending}
-            isStreaming={isStreaming}
-            onStop={this.handleStop}
-          />
-        </div>
-
-        {/* 历史会话列表组件（包含按钮和下拉菜单） */}
-
-      </>
+          {/* 历史会话列表组件（包含按钮和下拉菜单） */}
+        </>
+        </ToolBlockProvider>
+      </DrawerPortalProvider>
     );
   }
 }

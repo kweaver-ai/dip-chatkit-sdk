@@ -35,25 +35,25 @@ const KnowledgeSource: React.FC<KnowledgeSourceProps> = ({
   metricIds = [],
   apiMethods,
 }) => {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 点击外部区域关闭
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setExpanded(false);
-      }
-    };
+  // // 点击外部区域关闭
+  // useEffect(() => {
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+  //       setExpanded(false);
+  //     }
+  //   };
 
-    if (expanded) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+  //   if (expanded) {
+  //     document.addEventListener('mousedown', handleClickOutside);
+  //   }
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [expanded]);
+  //   return () => {
+  //     document.removeEventListener('mousedown', handleClickOutside);
+  //   };
+  // }, [expanded]);
 
   // 根据窗口高度动态计算面板最大高度：
   // 高度 = 窗口高度 - 底部 20px 间距 - 面板顶部距离

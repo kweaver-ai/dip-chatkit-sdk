@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ToolBlock as ToolBlockType } from '../../../../types';
 import ToolDrawer from './ToolDrawer';
 import { BlockRegistry } from '../../../../utils/BlockRegistry';
+import { useToolBlockContext } from '../../ToolBlockContext';
 
 /**
  * ToolBlock 组件的属性接口
@@ -24,6 +25,7 @@ export interface ToolBlockProps {
  */
 const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { closeRegistered, registerClose, setHasOpenDrawer } = useToolBlockContext();
   const { icon, title, name, input, output } = block.content;
 
   // 根据设计文档流程：判断当前 skill_name 是否在注册的工具中
@@ -66,13 +68,19 @@ const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
    * - 否则使用内置详情模块
    */
   const handleClick = () => {
-    // 判断是否来自注册工具
+    // 切换工具块时先执行上次注册的关闭函数（若有），再执行当前逻辑
+    closeRegistered();
     if (isRegistered && registration?.onClick) {
-      // 调用注册点击事件
-      registration.onClick(block as Record<string, any>);
+      const close = registration.onClick(block as Record<string, any>);
+      registerClose(typeof close === 'function' ? close : undefined);
     } else {
-      // 使用内置详情模块
-      setIsDrawerOpen(true);
+      registerClose(undefined);
+      // 延迟打开：closeRegistered() 可能触发上游 setState 导致本组件被重渲染/短暂 remount，
+      // 同一次点击里直接 setIsDrawerOpen(true) 的更新可能被丢弃，故放到下一微任务执行
+      queueMicrotask(() => {
+        setIsDrawerOpen(true);
+        setHasOpenDrawer(true);
+      });
     }
   };
 
@@ -116,7 +124,10 @@ const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
       {!(isRegistered && registration?.onClick) && (
         <ToolDrawer
           isOpen={isDrawerOpen}
-          onClose={() => setIsDrawerOpen(false)}
+          onClose={() => {
+            setIsDrawerOpen(false);
+            setHasOpenDrawer(false);
+          }}
           toolName={name}
           toolTitle={title}
           toolIcon={displayIcon}

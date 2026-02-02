@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import TreeView from './TreeView';
 import {
   TreeNode,
@@ -31,6 +31,10 @@ const KnowledgeNetworksTree: React.FC<KnowledgeNetworksTreeProps> = ({
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const getDetailRef = useRef(getKnowledgeNetworksDetail);
+  const getObjectTypesRef = useRef(getKnowledgeNetworkObjectTypes);
+  getDetailRef.current = getKnowledgeNetworksDetail;
+  getObjectTypesRef.current = getKnowledgeNetworkObjectTypes;
 
   useEffect(() => {
     const loadData = async () => {
@@ -39,10 +43,10 @@ const KnowledgeNetworksTree: React.FC<KnowledgeNetworksTreeProps> = ({
         setError(null);
 
         // 1. 获取知识网络详情
-        const detail = await getKnowledgeNetworksDetail(knowledgeNetwork.id);
+        const detail = await getDetailRef.current(knowledgeNetwork.id);
 
         // 2. 获取对象类型列表
-        const objectTypesResponse = await getKnowledgeNetworkObjectTypes(knowledgeNetwork.id);
+        const objectTypesResponse = await getObjectTypesRef.current(knowledgeNetwork.id);
 
         // 3. 转换为树节点数据格式
         const treeNodes: TreeNode[] = [
@@ -76,7 +80,8 @@ const KnowledgeNetworksTree: React.FC<KnowledgeNetworksTreeProps> = ({
     };
 
     loadData();
-  }, [knowledgeNetwork.id, knowledgeNetwork.name, getKnowledgeNetworksDetail, getKnowledgeNetworkObjectTypes]);
+    // 仅依赖知识网络 id/name 变化，API 方法通过 ref 访问避免重复触发
+  }, [knowledgeNetwork.id, knowledgeNetwork.name]);
 
   if (loading) {
     return (

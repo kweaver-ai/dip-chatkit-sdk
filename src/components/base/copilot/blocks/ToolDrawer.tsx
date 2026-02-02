@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useDrawerPortalContainer, resolveDrawerPortalContainer } from '../../DrawerPortalContext';
 
 /**
  * ToolDrawer 组件的属性接口
@@ -20,6 +22,11 @@ export interface ToolDrawerProps {
   input?: any;
   /** 工具输出结果 */
   output?: any;
+  /**
+   * Portal 挂载的 DOM 节点（可选）。
+   * 不传时优先使用 DrawerPortalContext，再默认挂到 document.getElementById('root') ?? document.body
+   */
+  container?: HTMLElement | null;
 }
 
 /**
@@ -34,7 +41,10 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
   toolIcon,
   input,
   output,
+  container: containerProp,
 }) => {
+  const containerFromContext = useDrawerPortalContainer();
+  const portalContainer = resolveDrawerPortalContainer(containerProp, containerFromContext);
   // 处理 ESC 键关闭抽屉
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -165,7 +175,12 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
       <div className="space-y-[16px]">
         {/* 标题和消息 */}
         {output.title && (
-          <div className="text-base font-semibold text-gray-900">{output.title}</div>
+          <div
+            className="text-base font-semibold text-gray-900 truncate"
+            title={output.title}
+          >
+            {output.title}
+          </div>
         )}
         {output.message && (
           <div className="text-sm text-gray-700">{output.message}</div>
@@ -266,7 +281,8 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
     return null;
   }
 
-  return (
+  // 使用 Portal 挂载到指定容器（默认 root），避免虚拟滚动容器的 transform 影响 fixed 定位
+  const drawerContent = (
     <>
       {/* 遮罩层 */}
       <div
@@ -406,6 +422,8 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
       `}</style>
     </>
   );
+
+  return createPortal(drawerContent, portalContainer);
 };
 
 export default ToolDrawer;

@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useDrawerPortalContainer, resolveDrawerPortalContainer } from '../../DrawerPortalContext';
 import { CodeViewTool } from './CodeViewTool';
 import TableView from './Json2PlotBlock/TableView';
 import Json2PlotContentView from './Json2PlotBlock/Json2PlotContentView';
@@ -24,6 +26,11 @@ export interface ToolDrawerProps {
   input?: any;
   /** 工具输出结果 */
   output?: any;
+  /**
+   * Portal 挂载的 DOM 节点（可选）。
+   * 不传时优先使用 DrawerPortalContext，再默认挂到 document.getElementById('root') ?? document.body
+   */
+  container?: HTMLElement | null;
 }
 
 /**
@@ -38,7 +45,10 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
   toolIcon,
   input,
   output,
+  container: containerProp,
 }) => {
+  const containerFromContext = useDrawerPortalContainer();
+  const portalContainer = resolveDrawerPortalContainer(containerProp, containerFromContext);
   // 拖拽相关状态
   const [topHeight, setTopHeight] = useState<number>(50); // 初始高度百分比（默认50%，即输入输出区域一样高）
   const [isDragging, setIsDragging] = useState(false);
@@ -395,7 +405,12 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
       <div className="space-y-4">
         {/* 标题和消息 */}
         {output.title && (
-          <div className="text-base font-semibold text-gray-900">{output.title}</div>
+          <div
+            className="text-base font-semibold text-gray-900 truncate"
+            title={output.title}
+          >
+            {output.title}
+          </div>
         )}
         {output.message && (
           <div className="text-sm text-gray-700">{output.message}</div>
@@ -650,7 +665,8 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
     return null;
   }
 
-  return (
+  // 使用 Portal 挂载到指定容器（默认 root），避免虚拟滚动容器的 transform 影响 fixed 定位
+  const drawerContent = (
     <>
       {/* 遮罩层 */}
       <div
@@ -667,7 +683,7 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-3">
             {renderIcon()}
-            <h2 className="text-lg font-semibold text-gray-900">{toolTitle}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 truncate max-w-[400px]" title={toolTitle}>{toolTitle}</h2>
           </div>
           <button
             onClick={onClose}
@@ -773,6 +789,8 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
       `}</style>
     </>
   );
+
+  return createPortal(drawerContent, portalContainer);
 };
 
 export default ToolDrawer;

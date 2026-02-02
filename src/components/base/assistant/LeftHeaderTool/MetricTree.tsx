@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import TreeView from './TreeView';
 import { TreeNode, MetricModel } from './types';
 import { AfSailorIcon, MetricIcon } from '@/components/icons';
@@ -22,9 +22,10 @@ const MetricTree: React.FC<MetricTreeProps> = ({
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const getMetricInfoByIdsRef = useRef(getMetricInfoByIds);
+  getMetricInfoByIdsRef.current = getMetricInfoByIds;
 
   useEffect(() => {
-    console.log('metricIds:', metricIds);
     const loadData = async () => {
       if (!metricIds || metricIds.length === 0) {
         setTreeData([]);
@@ -37,7 +38,7 @@ const MetricTree: React.FC<MetricTreeProps> = ({
         setError(null);
 
         // 1. 获取指标信息列表
-        const metrics = await getMetricInfoByIds(metricIds);
+        const metrics = await getMetricInfoByIdsRef.current(metricIds);
 
         // 2. 按 group_name 分组
         const groupedMetrics = metrics.reduce((acc, metric) => {
@@ -81,7 +82,8 @@ const MetricTree: React.FC<MetricTreeProps> = ({
     };
 
     loadData();
-  }, [metricIds, getMetricInfoByIds]);
+    // 仅依赖 metricIds 内容变化，API 方法通过 ref 访问避免重复触发
+  }, [metricIds?.join(',') ?? '']);
 
   if (loading) {
     return (

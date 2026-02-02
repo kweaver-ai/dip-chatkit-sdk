@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ToolBlock as ToolBlockType } from '../../../../types';
 import ToolDrawer from './ToolDrawer';
 import { BlockRegistry } from '../../../../utils/BlockRegistry';
+import { useToolBlockContext } from '../../ToolBlockContext';
 
 /**
  * ToolBlock 组件的属性接口
@@ -24,6 +25,7 @@ export interface ToolBlockProps {
  */
 const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { closeRegistered, registerClose } = useToolBlockContext();
   const { icon, title, name, input, output } = block.content;
   const { consumeTime } = block;
 
@@ -68,12 +70,14 @@ const ToolBlock: React.FC<ToolBlockProps> = ({ block }) => {
    * - 否则使用内置详情模块
    */
   const handleClick = () => {
-    // 判断是否来自注册工具
+    // 切换工具块时先执行上次注册的关闭函数（若有），再执行当前逻辑
+    closeRegistered();
     if (isRegistered && registration?.onClick) {
-      // 调用注册点击事件
-      registration.onClick(block.content.output as any);
+      const close = registration.onClick(block.content.output as any);
+      registerClose(typeof close === 'function' ? close : undefined);
+      setIsDrawerOpen(false);
     } else {
-      // 使用内置详情模块
+      registerClose(undefined);
       setIsDrawerOpen(true);
     }
   };

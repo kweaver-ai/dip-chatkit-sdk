@@ -105,8 +105,9 @@ export interface ToolBlockRegistration {
   Icon?: React.ReactNode;
   /** 工具点击事件
    * @param block 工具块数据，类型为 Record<string, any>
+   * @returns 可选返回关闭函数；切换工具块时 SDK 会先调用该函数，用于关闭本次打开的外层内容
    */
-  onClick?: (block: Record<string, any>) => void;
+  onClick?: (block: Record<string, any>) => void | (() => void);
 }
 
 /**

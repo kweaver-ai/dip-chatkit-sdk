@@ -649,6 +649,46 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
   }
 
   /**
+   * 更新指定工具名称对应的最后一个工具块的结果（用于流式工具如 contextloader_data_enhanced 的组装）
+   * @param messageId 消息 ID
+   * @param toolName 工具名称
+   * @param result 更新后的默认工具结果
+   */
+  protected updateDefaultToolBlockResult(
+    messageId: string,
+    toolName: string,
+    result: DefaultToolResult
+  ): void {
+    this.setState((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId !== messageId) return msg;
+        const content = msg.content;
+        let lastToolIndex = -1;
+        for (let i = content.length - 1; i >= 0; i--) {
+          if (content[i].type === BlockType.TOOL && (content[i] as ToolBlock).content?.name === toolName) {
+            lastToolIndex = i;
+            break;
+          }
+        }
+        if (lastToolIndex < 0) return msg;
+        const newContent = [...content];
+        const block = newContent[lastToolIndex] as ToolBlock;
+        newContent[lastToolIndex] = {
+          ...block,
+          content: {
+            ...block.content,
+            title: result.title,
+            input: result.input,
+            output: result.output,
+          },
+        };
+        return { ...msg, content: newContent };
+      });
+      return { messages: newMessages };
+    });
+  }
+
+  /**
    * 创建新的会话
    * 内部会调用子类实现的 generateConversation() 和 getOnboardingInfo() 方法
    */
