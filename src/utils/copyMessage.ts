@@ -156,14 +156,12 @@ export const extractMarkdownContent = (message: ChatMessage): string => {
                 }
               } catch (err) {
                 // output 处理失败时跳过
-                console.warn('工具 output 处理失败:', err)
               }
             }
             
             return text
           } catch (err) {
             // 工具块处理失败时跳过该工具，返回空字符串
-            console.warn('工具块处理失败:', err)
             return ''
           }
         }
@@ -251,7 +249,6 @@ export const copyMessageContent = async (message: ChatMessage): Promise<boolean>
         return true
       } catch (err) {
         // 如果 ClipboardItem 失败，降级到纯文本复制
-        console.warn('富文本复制失败，降级到纯文本复制:', err)
       }
     }
 

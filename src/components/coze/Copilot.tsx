@@ -58,8 +58,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
    */
   public async getOnboardingInfo(): Promise<OnboardingInfo> {
     try {
-      console.log('正在获取扣子智能体配置...');
-
       // 使用正确的 API 端点
       const response = await fetch(`${this.baseUrl}/v1/bots/${encodeURIComponent(this.botId)}?is_published=true`, {
         method: 'GET',
@@ -75,7 +73,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
       }
 
       const result = await response.json();
-      console.log('扣子智能体配置响应:', result);
 
       // 从响应中提取开场白和预置问题
       // 根据 OpenAPI 文档，data 包含 onboarding_info 对象
@@ -86,11 +83,8 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
         prologue: onboardingInfoV2.prologue || '你好！我是 AI 助手，有什么可以帮你的吗？',
         predefinedQuestions: onboardingInfoV2.suggested_questions || [],
       };
-
-      console.log('开场白信息已提取:', onboardingInfo);
       return onboardingInfo;
     } catch (error) {
-      console.error('获取扣子智能体配置失败:', error);
       // 返回默认开场白信息
       return {
         prologue: '你好！我是 AI 助手，有什么可以帮你的吗？',
@@ -107,8 +101,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
    */
   public async generateConversation(): Promise<string> {
     try {
-      console.log('正在创建扣子会话...');
-
       const response = await fetch(`${this.baseUrl}/v1/conversation/create`, {
         method: 'POST',
         headers: {
@@ -125,11 +117,8 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
 
       const result = await response.json();
       const conversationId = result.data?.id || result.conversation_id || '';
-
-      console.log('扣子会话创建成功, conversationID:', conversationId);
       return conversationId;
     } catch (error) {
-      console.error('创建扣子会话失败:', error);
       // 返回空字符串，允许在没有会话 ID 的情况下继续（扣子 v3 API 支持自动创建会话）
       return '';
     }
@@ -171,8 +160,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
     }
 
     try {
-      console.log('发起流式 Chat 请求:', { url: chatUrl, body: requestBody });
-
       const response = await fetch(chatUrl, {
         method: 'POST',
         headers: {
@@ -219,7 +206,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
 
       return finalMessage || initialAssistantMessage;
     } catch (error) {
-      console.error('调用扣子流式 API 失败:', error);
       throw error;
     }
   }
@@ -237,12 +223,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
       const data = JSON.parse(em.data);
       const prevBuffer = prev as string;
 
-      console.log('reduceAssistantMessage 调用:', {
-        event: em.event,
-        prevBuffer,
-        data,
-      });
-
       // 记录会话 ID
       if (data.conversation_id && data.conversation_id !== this.state.conversationID) {
         this.setState({ conversationID: data.conversation_id });
@@ -254,7 +234,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
         // 增量内容
         if (data.content && data.type === 'answer') {
           const newBuffer = prevBuffer + data.content;
-          console.log('增量内容:', data.content, '新buffer:', newBuffer);
           // 调用 appendMarkdownBlock 方法更新界面上的 Markdown 块
           this.appendMarkdownBlock(messageId, newBuffer);
           return newBuffer as K;
@@ -262,57 +241,46 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
       } else if (em.event === 'conversation.message.completed') {
         // 消息完成,只处理 type 为 answer 的消息
         if (data.content && data.type === 'answer') {
-          console.log('消息完成,完整内容:', data.content);
           // 调用 appendMarkdownBlock 方法更新界面上的 Markdown 块
           this.appendMarkdownBlock(messageId, data.content);
           return data.content as K;
         }
         // 忽略 verbose 类型的消息
         if (data.type === 'verbose') {
-          console.log('忽略 verbose 类型消息');
           return prevBuffer as K;
         }
       } else if (em.event === 'conversation.chat.completed') {
         // Chat 完成事件
-        console.log('Chat完成');
         return prevBuffer as K;
       } else if (em.event === 'conversation.chat.created') {
         // Chat 创建事件
-        console.log('Chat创建');
         return prevBuffer as K;
       } else if (em.event === 'conversation.chat.in_progress') {
         // Chat 进行中事件
-        console.log('Chat进行中');
         return prevBuffer as K;
       } else if (em.event === 'conversation.message.started') {
         // 消息开始事件
-        console.log('消息开始');
         return prevBuffer as K;
       } else if (em.event === 'done') {
         // DONE 事件
-        console.log('收到done事件');
         return prevBuffer as K;
       }
 
       // 处理扣子的其他消息类型事件
       if (data.msg_type === 'generate_answer_finish') {
         // 答案生成完成事件，保持当前 buffer
-        console.log('答案生成完成');
         return prevBuffer as K;
       }
 
       // 如果没有 event 字段,尝试从其他字段推断
       // 检查是否是 Chat 完成响应 (status: "completed")
       if (data.status === 'completed') {
-        console.log('检测到Chat完成状态');
         return prevBuffer as K;
       }
 
       // 其他未知事件类型，保持当前buffer而不是返回原始数据
-      console.log('未知事件类型,保持原buffer:', em.event, data);
       return prevBuffer as K;
     } catch (e) {
-      console.error('解析扣子事件失败:', e);
       return prev;
     }
   }
@@ -337,7 +305,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
    */
   public async terminateConversation(_conversationId: string): Promise<void> {
     // Coze 平台不支持主动终止会话
-    console.warn('Coze 平台不支持主动终止会话功能');
   }
 
   /**
@@ -347,7 +314,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
    * @returns 返回空数组
    */
   public async getConversations(_page?: number, _size?: number): Promise<import('../../types').ConversationHistory[]> {
-    console.warn('Coze 平台暂不支持获取历史会话列表功能');
     return [];
   }
 
@@ -357,7 +323,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
    * @returns 返回空数组
    */
   public async getConversationMessages(_conversationId: string): Promise<ChatMessage[]> {
-    console.warn('Coze 平台暂不支持获取会话消息列表功能');
     return [];
   }
 
@@ -367,7 +332,6 @@ export class ChatKitCoze extends ChatKitBase<ChatKitCozeProps> {
    * @returns 返回 Promise，直接 resolve
    */
   public async deleteConversation(_conversationID: string): Promise<void> {
-    console.warn('Coze 平台暂不支持删除会话功能');
   }
 
   /**

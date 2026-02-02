@@ -195,8 +195,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
      */
     public async getOnboardingInfo(): Promise<OnboardingInfo> {
       try {
-        console.log('正在获取 DIP 配置...');
-
         // 构造 agent-factory API 的完整 URL
         let agentFactoryUrl: string;
         if (this.dipBaseUrl.startsWith('http://') || this.dipBaseUrl.startsWith('https://')) {
@@ -207,8 +205,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
           // 开发环境：使用相对路径走代理
           agentFactoryUrl = `/api/agent-factory/v3/agent-market/agent/${encodeURIComponent(this.dipKey)}/version/v0`;
         }
-
-        console.log('调用 agent-factory API:', agentFactoryUrl);
 
         // 使用 executeDataAgentWithTokenRefresh 包装 API 调用，支持 token 刷新和重试
         const result = await this.executeDataAgentWithTokenRefresh(async () => {
@@ -257,7 +253,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         };
         return onboardingInfo;
       } catch (error) {
-        console.error('获取 DIP 配置失败:', error);
         // 返回默认开场白信息
         return {
           prologue: '你好！我是数据智能体助手，我可以帮你分析数据、回答问题。',
@@ -276,8 +271,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
      */
     public async generateConversation(title?: string): Promise<string> {
       try {
-        console.log('正在创建 DIP 会话...', title ? `标题: ${title}` : '');
-
         // 构造创建会话的请求体
         const requestBody: any = {
           title: title || '新会话',
@@ -310,11 +303,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
         // 从响应中获取会话 ID
         const conversationId = result.data?.id || result.id || '';
-
-        console.log('DIP 会话创建成功, conversationID:', conversationId, 'ttl:', result.data?.ttl || result.ttl);
         return conversationId;
       } catch (error) {
-        console.error('创建 DIP 会话失败:', error);
         // 返回空字符串，允许在没有会话 ID 的情况下继续
         return '';
       }
@@ -466,7 +456,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
       // 如果 action 是 'end'，直接返回
       if (em.action === 'end') {
-        console.log('EventStream 结束');
         return prev;
       }
 
@@ -479,7 +468,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       
       // 初始化或按路径不可变更新，避免每事件全量深拷贝（大对象时会导致卡顿）
       const isInit = hasAssistantMessage && (!prev || Object.keys(prev as any).length === 0);
-      if (isInit) console.log('初始化 AssistantMessage 对象，key:', key);
       const base = isInit ? ({} as AssistantMessage) : (prev || {}) as AssistantMessage;
       let assistantMessage: AssistantMessage;
       if (em.action === 'upsert') {
@@ -496,12 +484,10 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
       if (!whitelistEntry) {
         // 不在白名单中，跳过处理，但仍需检查并同步更新 messageId
-        console.log('跳过非白名单事件:', em.action, jsonPath);
         const processedAssistantMessage = assistantMessage;
         
         const assistantMessageId = processedAssistantMessage.message?.id;
         if (assistantMessageId && assistantMessageId !== messageId) {
-          console.log('同步更新消息 ID（白名单外）:', messageId, '->', assistantMessageId);
           (this as any).setState((prevState: any) => {
             const messages = prevState.messages.map((msg: ChatMessage) => {
               if (msg.messageId === messageId) {
@@ -531,7 +517,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       let currentMessageId = messageId;
       
       if (assistantMessageId && assistantMessageId !== messageId) {
-        console.log('同步更新消息 ID，保持 AssistantMessage.id 和 ChatMessage.messageId 一致:', messageId, '->', assistantMessageId);
         currentMessageId = assistantMessageId; // 使用新的 messageId
         // 更新 state 中的消息 ID 和 streamingMessageId
         (this as any).setState((prevState: any) => {
@@ -559,7 +544,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
       return assistantMessage as K;
     } catch (e) {
-      console.error('解析 DIP 事件失败:', e, eventMessage);
       return prev;
     }
   }
@@ -641,7 +625,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
                 (this as any).appendWebSearchBlock(messageId, searchQuery);
               }
             }
-            console.log('content', content);
             // 检查是否是 Json2Plot 工具
             if (content?.skill_info?.name === 'json2plot') {
               const chartData = this.extractJson2PlotData(content);
@@ -780,7 +763,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         results,
       };
     } catch (e) {
-      console.error('提取 Web 搜索查询失败:', e);
       return null;
     }
   }
@@ -796,7 +778,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
   public extractJson2PlotData(progress: any): ChartDataSchema | null {
     try {
       // 从 answer.choices[0].message.tool_calls 中提取数据
-      console.log(' Json2Plot progress', progress);
       const toolCalls = progress?.answer?.choices?.[0]?.message?.tool_calls;
 
       if (!toolCalls || !Array.isArray(toolCalls)) {
@@ -958,7 +939,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
       return chartData;
     } catch (e) {
-      console.error('提取 Json2Plot 数据失败:', e);
       return null;
     }
   }
@@ -1027,7 +1007,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         (this as any).appendWebSearchBlock(messageId, searchQuery);
       }
     } else if (skillName === 'json2plot') {
-      console.log('skillInfo', skillInfo);
       // json2plot 工具：将 skill_info.args 和 answer 解析出 ChartDataSchema 结构并输出到界面
       const chartData = this.extractChartDataFromArgs(skillInfo.args, answer);
       if (chartData) {
@@ -1140,7 +1119,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         results,
       };
     } catch (e) {
-      console.error('提取 Web 搜索查询失败:', e);
       return null;
     }
   }
@@ -1297,7 +1275,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
       return chartData;
     } catch (e) {
-      console.error('提取图表数据失败:', e);
       return null;
     }
   }
@@ -1337,7 +1314,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         output: codeOutput,
       };
     } catch (e) {
-      console.error('提取代码执行结果失败:', e);
       return null;
     }
   }
@@ -1414,7 +1390,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         explanation,
       };
     } catch (e) {
-      console.error('提取 Text2SQL 结果失败:', e);
       return null;
     }
   }
@@ -1463,7 +1438,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         data: Array.isArray(data) ? data : [],
       };
     } catch (e) {
-      console.error('提取 Text2Metric 结果失败:', e);
       return null;
     }
   }
@@ -1522,7 +1496,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         result_cache_key,
       };
     } catch (e) {
-      console.error('提取 AfSailor 结果失败:', e);
       return null;
     }
   }
@@ -1564,7 +1537,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         result_cache_key,
       };
     } catch (e) {
-      console.error('提取 DatasourceFilter 结果失败:', e);
       return null;
     }
   }
@@ -1600,7 +1572,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         result_cache_key,
       };
     } catch (e) {
-      console.error('提取 DatasourceRerank 结果失败:', e);
       return null;
     }
   }
@@ -2044,16 +2015,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         const needsRefresh = this.shouldRefreshToken(status, errorBody);
 
         if (needsRefresh && this.dipRefreshToken) {
-          console.log('检测到 DIP token 失效，正在刷新 token...');
-
           try {
             // 调用 refreshToken 方法获取新 token
             const newToken = await this.dipRefreshToken();
 
             // 更新 token 属性
             this.dipToken = newToken;
-
-            console.log('DIP Token 刷新成功，正在重试请求...');
 
             // 重试 API 调用
             try {
@@ -2064,14 +2031,13 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
               const retryErrorBody = retryError.body || retryError.response?.data || retryError;
 
               if (this.shouldRefreshToken(retryStatus, retryErrorBody)) {
-                console.error('重试后仍然提示 token 失效，放弃重试');
+                // 重试后仍然提示 token 失效，放弃重试
               }
 
               // 抛出重试后的错误
               throw retryError;
             }
           } catch (refreshError) {
-            console.error('刷新 DIP token 失败:', refreshError);
             // 刷新失败，抛出原始错误
             throw error;
           }
@@ -2093,8 +2059,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
      */
     public async getConversations(page: number = 1, size: number = 10): Promise<ConversationHistory[]> {
       try {
-        console.log('正在获取历史会话列表...');
-
         // 构造 URL，包含分页参数
         const url = `${this.dipBaseUrl}/app/${this.dipKey}/conversation?page=${page}&size=${size}`;
 
@@ -2131,11 +2095,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
           message_index: item.message_index,
           read_message_index: item.read_message_index,
         }));
-
-        console.log(`成功获取 ${conversations.length} 条历史会话`);
         return conversations;
       } catch (error) {
-        console.error('获取历史会话列表失败:', error);
         // 返回空数组，允许在失败的情况下继续
         return [];
       }
@@ -2152,8 +2113,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
      */
     public async getConversationMessages(conversationId: string): Promise<ChatMessage[]> {
       try {
-        console.log('正在获取会话消息列表，conversationId:', conversationId);
-
         // 构造 URL
         const url = `${this.dipBaseUrl}/app/${this.dipKey}/conversation/${conversationId}`;
 
@@ -2211,7 +2170,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
                 });
               }
             } catch (e) {
-              console.error('解析用户消息内容失败:', e);
             }
 
             chatMessages.push(userMessage);
@@ -2242,15 +2200,11 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
               chatMessages.push(aiMessage);
             } catch (e) {
-              console.error('解析 AI 助手消息失败:', e);
             }
           }
         }
-
-        console.log(`成功获取 ${chatMessages.length} 条对话消息`);
         return chatMessages;
       } catch (error) {
-        console.error('获取会话消息列表失败:', error);
         // 返回空数组，允许在失败的情况下继续
         return [];
       }
@@ -2266,8 +2220,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
      */
     public async deleteConversation(conversationID: string): Promise<void> {
       try {
-        console.log('正在删除会话，conversationID:', conversationID);
-
         // 构造 URL
         const url = `${this.dipBaseUrl}/app/${this.dipKey}/conversation/${conversationID}`;
 
@@ -2292,10 +2244,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
           return response;
         });
-
-        console.log('会话删除成功');
       } catch (error) {
-        console.error('删除会话失败:', error);
         throw error;
       }
     }
@@ -2310,8 +2259,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
      */
     public async getKnowledgeNetworksDetail(id: string): Promise<any> {
       try {
-        console.log('正在获取知识网络详情，id:', id);
-
         // 构造 URL
         let url: string;
         if (this.dipBaseUrl.startsWith('http://') || this.dipBaseUrl.startsWith('https://')) {
@@ -2341,11 +2288,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
           return await response.json();
         });
-
-        console.log('知识网络详情获取成功');
         return result.data || result;
       } catch (error) {
-        console.error('获取知识网络详情失败:', error);
         throw error;
       }
     }
@@ -2366,8 +2310,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       limit: number = -1
     ): Promise<any> {
       try {
-        console.log('正在获取知识网络对象类型，id:', id, 'offset:', offset, 'limit:', limit);
-
+        // 构造 URL
         // 构造 URL
         let baseUrl: string;
         if (this.dipBaseUrl.startsWith('http://') || this.dipBaseUrl.startsWith('https://')) {
@@ -2399,11 +2342,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
           return await response.json();
         });
-
-        console.log('知识网络对象类型获取成功');
         return result.data || result;
       } catch (error) {
-        console.error('获取知识网络对象类型失败:', error);
         throw error;
       }
     }
@@ -2418,15 +2358,12 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
      */
     public async getMetricInfoByIds(ids: string[]): Promise<any[]> {
       try {
-        console.log('正在获取指标信息，ids:', ids);
-
         if (!ids || ids.length === 0) {
           return [];
         }
 
         // 构造 URL，多个 ID 用逗号隔开
         const idsParam = ids.join(',');
-        console.log('idsParam:', idsParam);
         let url: string;
         if (this.dipBaseUrl.startsWith('http://') || this.dipBaseUrl.startsWith('https://')) {
           const baseUrlObj = new URL(this.dipBaseUrl);
@@ -2455,13 +2392,10 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
           return await response.json();
         });
-
-        console.log('指标信息获取成功');
         return Array.isArray(result) ? result : result.data || [];
       } catch (error) {
-        console.error('获取指标信息失败:', error);
         throw error;
       }
     }
-  };
+  }
 }

@@ -33,13 +33,7 @@ export class BlockRegistry {
    * 如果工具已注册，将直接覆盖原有注册信息
    */
   static registerTool(registration: ToolBlockRegistration): void {
-    const isUpdate = this.registry.has(registration.name);
     this.registry.set(registration.name, registration);
-    if (isUpdate) {
-      console.log(`已更新工具: ${registration.name}`);
-    } else {
-      console.log(`已注册工具: ${registration.name}`);
-    }
   }
 
   /**
@@ -49,13 +43,7 @@ export class BlockRegistry {
    */
   static registerTools(registrations: Array<ToolBlockRegistration>): void {
     registrations.forEach(item => {
-      const isUpdate = this.registry.has(item.name);
       this.registry.set(item.name, item);
-      if (isUpdate) {
-        console.log(`已更新工具: ${item.name}`);
-      } else {
-        console.log(`已注册工具: ${item.name}`);
-      }
     });
   }
 
@@ -64,10 +52,7 @@ export class BlockRegistry {
    * @param toolName 工具名称
    */
   static unregisterTool(toolName: string): void {
-    const removed = this.registry.delete(toolName);
-    if (removed) {
-      console.log(`已取消注册工具: ${toolName}`);
-    }
+    this.registry.delete(toolName);
   }
 
   /**
@@ -93,7 +78,7 @@ export class BlockRegistry {
    */
   static clearAll(): void {
     this.registry.clear();
-    console.log('已清空所有工具注册');
+    // 保留行为，移除控制台输出
   }
 
   /**

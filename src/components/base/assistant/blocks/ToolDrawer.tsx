@@ -55,17 +55,19 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
   const drawerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
-  // 处理 ESC 键关闭抽屉
+  // 处理 ESC 键关闭抽屉（onClose 用 ref 持有，避免父组件内联函数导致 effect 每轮都执行）
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        onCloseRef.current();
       }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // 防止背景滚动
   useEffect(() => {
@@ -394,7 +396,6 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
     if (!output || typeof output !== 'object') {
       return <div className="text-sm text-gray-500">暂无数据</div>;
     }
-    console.log('output', output);
 
     // 转换数据为 ChartDataSchema 格式
     const chartData = output.data && Array.isArray(output.data) && output.data.length > 0

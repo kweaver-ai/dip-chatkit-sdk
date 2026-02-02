@@ -73,7 +73,6 @@ const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId,
     
     const previousUserMessage = findPreviousUserMessage(currentIndex);
     if (!previousUserMessage) {
-      console.warn('未找到上一条用户消息');
       return;
     }
 
@@ -146,7 +145,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId,
       return () => {
         resizeObserver.disconnect();
       };
-    }, [index, message]);
+    }, [index, message?.messageId]);
 
     if (!message) return null;
 

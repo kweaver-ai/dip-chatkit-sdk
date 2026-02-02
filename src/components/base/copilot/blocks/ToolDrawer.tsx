@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -45,16 +45,19 @@ const ToolDrawer: React.FC<ToolDrawerProps> = ({
 }) => {
   const containerFromContext = useDrawerPortalContainer();
   const portalContainer = resolveDrawerPortalContainer(containerProp, containerFromContext);
-  // 处理 ESC 键关闭抽屉
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // 处理 ESC 键关闭抽屉（onClose 用 ref 持有，避免父组件内联函数导致 effect 每轮都执行）
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        onCloseRef.current();
       }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // 防止背景滚动
   useEffect(() => {

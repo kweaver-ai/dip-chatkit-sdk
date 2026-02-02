@@ -1,6 +1,6 @@
 {
   "name": "@kweaver-ai/chatkit",
-  "version": "0.1.11",
+  "version": "0.1.10",
   "publishConfig": {
     "access": "public"
   },

@@ -132,7 +132,6 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
   private async initializeConversation(): Promise<void> {
     // 防止并发调用
     if (this.isInitializing || this.hasInitialized) {
-      console.log('会话正在初始化或已初始化，跳过');
       return;
     }
 
@@ -141,18 +140,16 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     this.setState({ isLoadingOnboarding: true });
 
     try {
-      console.log('ChatKit 组件初始化，自动创建会话...');
       await this.createConversation();
       this.hasInitialized = true;
     } catch (error) {
-      console.error('自动创建会话失败:', error);
       // 即使创建会话失败，也尝试获取开场白信息
       try {
         const onboardingInfo = await this.getOnboardingInfo();
         this.setState({ onboardingInfo });
         this.hasInitialized = true;
       } catch (e) {
-        console.error('获取开场白信息失败:', e);
+        // 获取开场白信息失败，静默失败
       }
     } finally {
       this.isInitializing = false;
@@ -329,7 +326,6 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param query Web 搜索的执行详情
    */
   protected appendWebSearchBlock(messageId: string, query: WebSearchQuery): void {
-    console.log('appendWebSearchBlock', query);
     this.setState((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
@@ -707,10 +703,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
       this.setState({
         onboardingInfo: onboardingInfo,
       });
-
-      console.log('开场白信息已加载:', onboardingInfo);
     } catch (error) {
-      console.error('创建新会话失败:', error);
       throw error;
     } finally {
       // 无论成功或失败，都取消加载状态
@@ -734,11 +727,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
         messages: messages,
         onboardingInfo: undefined, // 清除开场白信息
       });
-
-      console.log('历史会话已加载, conversationID:', conversationId);
-      console.log('加载了', messages.length, '条消息');
     } catch (error) {
-      console.error('加载历史会话失败:', error);
       throw error;
     }
   };
@@ -751,7 +740,6 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
       conversationID: '',
       messages: [],
     });
-    console.log('会话已清除');
   };
 
   /**
@@ -776,14 +764,12 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     let currentConversationID = conversationID || this.state.conversationID;
 
     // 如果没有会话 ID，则创建新会话
-    if (!currentConversationID) {
+      if (!currentConversationID) {
       try {
         // 使用发送的内容作为会话标题
         currentConversationID = await this.generateConversation(text);
         this.setState({ conversationID: currentConversationID });
-        console.log('自动创建新会话, conversationID:', currentConversationID);
       } catch (error) {
-        console.error('自动创建会话失败:', error);
         // 即使创建会话失败，也继续发送消息（某些平台可能不需要预先创建会话）
       }
     }
@@ -837,7 +823,6 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
 
       return assistantMessage;
     } catch (error) {
-      console.error('发送消息失败:', error);
       this.setState({ isSending: false, streamingMessageId: null });
       throw error;
     }
@@ -863,7 +848,6 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-          console.log('流式响应完成');
           break;
         }
 
@@ -884,7 +868,6 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
           if (trimmedLine.startsWith('event:')) {
             // 保存 SSE 事件类型，用于下一个 data 行
             currentEvent = trimmedLine.slice(6).trim();
-            console.log('收到SSE event:', currentEvent);
             continue;
           }
 
@@ -892,13 +875,11 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
             const dataStr = trimmedLine.slice(5).trim();
 
             if (dataStr === '[DONE]') {
-              console.log('收到 DONE 标记');
               continue;
             }
 
             try {
               const data = JSON.parse(dataStr);
-              console.log('收到SSE数据:', data);
 
               // 构造 EventStreamMessage
               // 使用 SSE 的 event 行中的事件类型，如果没有则尝试从 data 中获取
@@ -906,8 +887,6 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
                 event: currentEvent || data.event || data.type || '',
                 data: dataStr,
               };
-
-              console.log('构造的 EventStreamMessage:', eventMessage);
 
               // 调用子类的 reduceAssistantMessage 方法解析事件
               // 传入 assistantMessageId 以便子类可以直接更新对应的消息
@@ -920,9 +899,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
               // 重置 currentEvent，准备处理下一个事件
               currentEvent = '';
             } catch (e) {
-              console.error('解析流式响应失败:', e, '原始数据长度:', dataStr.length);
-              console.error('数据前100字符:', dataStr.substring(0, 100));
-              console.error('数据后100字符:', dataStr.substring(Math.max(0, dataStr.length - 100)));
+              // 解析流式响应失败时静默处理，避免影响主流程
             }
           }
         }
@@ -930,7 +907,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
 
       // 处理缓冲区中剩余的数据（如果有）
       if (buffer.trim()) {
-        console.log('处理剩余缓冲区数据:', buffer);
+        // 当前未对残留缓冲区做额外处理
       }
     } finally {
       // 流式传输完成后,闭包会被丢弃
@@ -959,8 +936,6 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
       const needsRefresh = this.shouldRefreshToken(status, errorBody);
 
       if (needsRefresh && this.refreshToken) {
-        console.log('检测到 token 失效，正在刷新 token...');
-
         try {
           // 调用 refreshToken 方法获取新 token
           const newToken = await this.refreshToken();
@@ -968,28 +943,25 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
           // 更新 token 属性
           this.token = newToken;
 
-          console.log('Token 刷新成功，正在重试请求...');
-
           // 重试 API 调用
           try {
             return await apiCall();
-          } catch (retryError: any) {
-            // 重试后仍然失败，检查是否还是 token 问题
-            const retryStatus = retryError.status || retryError.response?.status || 0;
-            const retryErrorBody = retryError.body || retryError.response?.data || retryError;
+            } catch (retryError: any) {
+              // 重试后仍然失败，检查是否还是 token 问题
+              const retryStatus = retryError.status || retryError.response?.status || 0;
+              const retryErrorBody = retryError.body || retryError.response?.data || retryError;
 
-            if (this.shouldRefreshToken(retryStatus, retryErrorBody)) {
-              console.error('重试后仍然提示 token 失效，放弃重试');
+              if (this.shouldRefreshToken(retryStatus, retryErrorBody)) {
+                // 重试后仍然提示 token 失效，放弃重试
+              }
+
+              // 抛出重试后的错误
+              throw retryError;
             }
-
-            // 抛出重试后的错误
-            throw retryError;
+          } catch (refreshError) {
+            // 刷新失败，抛出原始错误
+            throw error;
           }
-        } catch (refreshError) {
-          console.error('刷新 token 失败:', refreshError);
-          // 刷新失败，抛出原始错误
-          throw error;
-        }
       }
 
       // 不需要刷新 token，直接抛出错误
@@ -1007,13 +979,9 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
 
     const context = this.state.applicationContext || this.props.defaultApplicationContext || { title: '', data: {} };
 
-    console.log('发送消息:', this.state.textInput);
-    console.log('选中的上下文:', context);
-
     try {
       await this.send(this.state.textInput, context);
     } catch (error) {
-      console.error('发送消息失败:', error);
     }
   };
 
@@ -1025,11 +993,8 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     const { conversationID, streamingMessageId } = this.state;
 
     if (!streamingMessageId) {
-      console.warn('没有正在进行的流式响应');
       return;
     }
-
-    console.log('停止流式响应, conversationID:', conversationID);
 
     try {
       // 调用子类实现的 terminateConversation 方法
@@ -1040,10 +1005,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
         streamingMessageId: null,
         isSending: false,
       });
-
-      console.log('流式响应已停止');
     } catch (error) {
-      console.error('停止流式响应失败:', error);
       // 即使失败，也清除状态，让用户可以重新操作
       this.setState({
         streamingMessageId: null,

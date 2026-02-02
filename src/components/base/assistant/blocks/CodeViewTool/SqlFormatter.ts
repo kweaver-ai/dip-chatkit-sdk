@@ -44,7 +44,6 @@ export const formatSql = (sql: string, options?: SqlFormatOptions): string => {
     });
   } catch (error) {
     // 格式化失败时返回原代码
-    console.warn('SQL格式化失败:', error);
     return sql;
   }
 };

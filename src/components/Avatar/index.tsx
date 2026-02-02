@@ -48,7 +48,6 @@ export const Avatar: React.FC<AvatarProps> = ({ name, ...props }) => {
   const AvatarComponent = AvatarMap[name];
   
   if (!AvatarComponent) {
-    console.warn(`Avatar with name "${name}" not found. Available names: ${Object.keys(AvatarMap).join(', ')}`);
     return null;
   }
   

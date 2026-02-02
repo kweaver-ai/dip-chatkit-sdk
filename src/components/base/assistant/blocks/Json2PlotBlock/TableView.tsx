@@ -65,12 +65,12 @@ const TableView: React.FC<TableViewProps> = ({
     return Math.ceil(data.rows.length / currentPageSize);
   }, [data.rows.length, pagination, currentPageSize]);
 
-  // 当总页数变化时，如果当前页超出范围，重置到第一页
+  // 当总页数变化时，如果当前页超出范围，重置到第一页（用函数式更新避免 currentPage 入依赖导致多余执行）
   useEffect(() => {
-    if (pagination && currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
+    if (pagination && totalPages > 0) {
+      setCurrentPage((prev) => (prev > totalPages ? 1 : prev));
     }
-  }, [pagination, totalPages, currentPage]);
+  }, [pagination, totalPages]);
   
   // 计算分页数据
   const paginatedData = useMemo(() => {
