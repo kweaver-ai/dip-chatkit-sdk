@@ -1,11 +1,33 @@
 import { ChatKitBase, ChatKitBaseProps, ChatKitBaseState } from '../ChatKitBase';
-import { DrawerPortalProvider } from '../DrawerPortalContext';
-import { ToolBlockProvider } from '../ToolBlockContext';
+import { DrawerPortalProvider, useDrawerPortalContainer } from '../DrawerPortalContext';
+import { ToolBlockProvider, useToolBlockContext } from '../ToolBlockContext';
 import MessageList from './MessageList';
 import InputArea from './InputArea';
 import Header from './Header';
 import Prologue from './Prologue';
+import ToolDrawer from './blocks/ToolDrawer';
 import { ChatMessage, BlockType } from '../../../types';
+
+/**
+ * 单例 ToolDrawer 宿主：从 Context 读取抽屉状态与数据并渲染 ToolDrawer。
+ * 与 AssistantBase 一致，避免 ToolBlock 因虚拟滚动/消息更新重渲染导致抽屉状态重置。
+ */
+function ToolDrawerHost() {
+  const { drawerPayload, closeToolDrawer } = useToolBlockContext();
+  const container = useDrawerPortalContainer();
+  return (
+    <ToolDrawer
+      isOpen={!!drawerPayload}
+      onClose={closeToolDrawer}
+      toolName={drawerPayload?.toolName ?? ''}
+      toolTitle={drawerPayload?.toolTitle ?? ''}
+      toolIcon={drawerPayload?.toolIcon}
+      input={drawerPayload?.input}
+      output={drawerPayload?.output}
+      container={container ?? undefined}
+    />
+  );
+}
 
 /**
  * CopilotBase 组件的属性接口
@@ -114,6 +136,13 @@ export abstract class CopilotBase<P extends CopilotBaseProps = CopilotBaseProps>
       throw error;
     }
   };
+
+  /** 点击相关问题：作为新问题发送 */
+  handleSelectQuestion = (question: string): void => {
+    if (!question?.trim() || this.state.isSending) return;
+    this.send(question.trim()).catch((err) => console.error('发送相关问题失败:', err));
+  };
+
   /**
    * 实现 React.Component.render() 方法
    * 渲染 Copilot 模式的界面
@@ -167,6 +196,7 @@ export abstract class CopilotBase<P extends CopilotBaseProps = CopilotBaseProps>
                   messages={messages} 
                   streamingMessageId={streamingMessageId}
                   onRegenerate={this.handleRegenerate}
+                  onSelectQuestion={this.handleSelectQuestion}
                 />
               )}
             </div>
@@ -184,7 +214,8 @@ export abstract class CopilotBase<P extends CopilotBaseProps = CopilotBaseProps>
             />
           </div>
 
-          {/* 历史会话列表组件（包含按钮和下拉菜单） */}
+          {/* 内置工具抽屉单例：状态与数据来自 ToolBlockContext，不受 ToolBlock 重渲染影响 */}
+          <ToolDrawerHost />
         </>
         </ToolBlockProvider>
       </DrawerPortalProvider>

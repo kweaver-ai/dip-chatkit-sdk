@@ -419,12 +419,31 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         throw new Error('无法获取流式响应');
       }
 
+      // 记录流式开始时间，用于计算本次回答耗时
+      const startTime = Date.now();
+
       // 处理流式响应
       await (this as any).handleStreamResponse(reader, assistantMessageId);
 
       // 从 state 中获取最终更新后的消息
       // 优先使用 streamingMessageId（可能已被 assistant_message_id 更新），否则使用初始的 assistantMessageId
       const currentStreamingMessageId = (this as any).state.streamingMessageId || assistantMessageId;
+
+      // 计算耗时（秒），并写入当前助手消息的 messageContext（作为兜底；优先使用后端的 total_time）
+      const elapsedSeconds = (Date.now() - startTime) / 1000;
+      if (elapsedSeconds >= 0 && Number.isFinite(elapsedSeconds)) {
+        try {
+          if (typeof (this as any).updateMessageContext === 'function') {
+            (this as any).updateMessageContext(currentStreamingMessageId, {
+              // 若后端通过 message.ext.total_time 下发了更精确的耗时，后续白名单逻辑会覆盖该值
+              elapsedSeconds,
+            });
+          }
+        } catch {
+          // 写入统计信息失败时静默处理，避免影响主流程
+        }
+      }
+
       const finalMessage = (this as any).state.messages.find((msg: any) => msg.messageId === currentStreamingMessageId);
 
       return finalMessage || initialAssistantMessage;
@@ -488,7 +507,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         
         const assistantMessageId = processedAssistantMessage.message?.id;
         if (assistantMessageId && assistantMessageId !== messageId) {
-          (this as any).setState((prevState: any) => {
+          (this as any).applyStreamingUpdate((prevState: any) => {
             const messages = prevState.messages.map((msg: ChatMessage) => {
               if (msg.messageId === messageId) {
                 return {
@@ -504,7 +523,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             };
           });
         }
-        
+
         return processedAssistantMessage as K;
       }
 
@@ -518,8 +537,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       
       if (assistantMessageId && assistantMessageId !== messageId) {
         currentMessageId = assistantMessageId; // 使用新的 messageId
-        // 更新 state 中的消息 ID 和 streamingMessageId
-        (this as any).setState((prevState: any) => {
+        // 更新 state 中的消息 ID 和 streamingMessageId（流式期间走批处理，避免 Maximum update depth exceeded）
+        (this as any).applyStreamingUpdate((prevState: any) => {
           const messages = prevState.messages.map((msg: ChatMessage) => {
             if (msg.messageId === messageId) {
               return {
@@ -540,6 +559,22 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       // 这样可以确保 append*Block 方法能找到正确的消息
       if (whitelistEntry.postProcess) {
         whitelistEntry.postProcess(assistantMessage, em.content, currentMessageId);
+      }
+
+      // 兜底：按设计文档 3.2 白名单，total_tokens 仅从 message.ext.total_tokens 获取（已由 upsert 写入）
+      try {
+        const msg: any = assistantMessage && (assistantMessage as any).message;
+        const totalTokens =
+          msg?.ext != null && typeof msg.ext.total_tokens === 'number'
+            ? msg.ext.total_tokens
+            : undefined;
+        if (totalTokens != null && typeof (this as any).updateMessageContext === 'function') {
+          (this as any).updateMessageContext(currentMessageId, {
+            totalTokens,
+          });
+        }
+      } catch {
+        // 静默处理，避免影响主流程
       }
 
       return assistantMessage as K;
@@ -607,6 +642,59 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     } = {
       'upsert:error': {},
       'upsert:message': {},
+      // 相关推荐问题：写入 message.ext.related_queries
+      'upsert:message.ext.related_queries': {
+        postProcess: (_assistantMessage, content, messageId) => {
+          const questions = Array.isArray(content) ? content.filter((q) => typeof q === 'string' && q.trim().length > 0) : [];
+          if (!questions.length) return;
+          try {
+            if (typeof (this as any).updateMessageContext === 'function') {
+              (this as any).updateMessageContext(messageId, {
+                relatedQuestions: questions,
+              });
+            }
+          } catch {
+            // 静默失败，避免影响主流程
+          }
+        },
+      },
+      // 总耗时：message.ext.total_time（单位：秒）
+      'upsert:message.ext.total_time': {
+        postProcess: (_assistantMessage, content, messageId) => {
+          const elapsedSeconds = typeof content === 'number' ? content : undefined;
+          if (elapsedSeconds == null) return;
+          try {
+            if (typeof (this as any).updateMessageContext === 'function') {
+              (this as any).updateMessageContext(messageId, {
+                elapsedSeconds,
+              });
+            }
+          } catch {
+            // 静默失败
+          }
+        },
+      },
+      // Token 总数：仅按设计文档 3.2 白名单，通过 upsert message.ext.total_tokens 获取（content 为数字或含 total_tokens 的对象）
+      'upsert:message.ext.total_tokens': {
+        postProcess: (_assistantMessage, content, messageId) => {
+          const totalTokens =
+            typeof content === 'number'
+              ? content
+              : content && typeof content.total_tokens === 'number'
+                ? content.total_tokens
+                : undefined;
+          if (totalTokens == null) return;
+          try {
+            if (typeof (this as any).updateMessageContext === 'function') {
+              (this as any).updateMessageContext(messageId, {
+                totalTokens,
+              });
+            }
+          } catch {
+            // 静默失败
+          }
+        },
+      },
       // 注意：upsert:assistant_message_id 的处理已移除
       // 现在通过检查 AssistantMessage.message.id 来同步更新 ChatMessage.messageId
       // 这样可以保证 AssistantMessage.id 和 ChatMessage.messageId 保持一致
@@ -650,7 +738,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       },
     };
 
-    // 对于数组索引的情况，使用正则匹配
+    // 对于数组索引和子字段的情况，使用正则匹配
     const progressArrayPattern = /^message\.content\.middle_answer\.progress\[\d+\]$/;
     const progressArrayAnswerPattern = /^message\.content\.middle_answer\.progress\[\d+\]\.answer$/;
     // 流式工具（如 contextloader_data_enhanced）通过 append progress[N].answer.answer 下发片段，需用已组装结果更新工具块
@@ -713,6 +801,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         },
       };
     }
+
+    // 设计文档 3.2 白名单仅规定通过 upsert message.ext.total_tokens 获取 total_tokens，不处理其他 token_usage 路径
 
     const key = `${action}:${jsonPath}`;
     return entries[key] || null;
@@ -2179,6 +2269,18 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             try {
               // 1. 对 content 进行 JSON 反序列化
               const contentObj = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+              let ext: Record<string, unknown> | null = null;
+              if (msg.ext != null) {
+                if (typeof msg.ext === 'string') {
+                  try {
+                    ext = JSON.parse(msg.ext) as Record<string, unknown>;
+                  } catch {
+                    ext = null;
+                  }
+                } else if (typeof msg.ext === 'object') {
+                  ext = msg.ext as Record<string, unknown>;
+                }
+              }
 
               const aiMessage: ChatMessage = {
                 messageId,
@@ -2195,6 +2297,28 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
               if (middleAnswer?.progress && Array.isArray(middleAnswer.progress)) {
                 for (const progressItem of middleAnswer.progress) {
                   this.appendSkillOrLLMContentToMessage(progressItem, aiMessage);
+                }
+              }
+
+              // 3. 从历史消息的 ext 中解析 messageContext：相关问题、耗时、tokens（与流式白名单一致）
+              if (ext && typeof ext === 'object') {
+                const relatedQuestions = Array.isArray(ext.related_queries)
+                  ? (ext.related_queries as string[]).filter((q: string) => typeof q === 'string' && q.trim().length > 0)
+                  : undefined;
+                const elapsedSeconds =
+                  typeof ext.total_time === 'number' && Number.isFinite(ext.total_time) ? ext.total_time : undefined;
+                const totalTokens =
+                  typeof ext.total_tokens === 'number' && Number.isFinite(ext.total_tokens)
+                    ? ext.total_tokens
+                    : ext.token_usage && typeof (ext.token_usage as any).total_tokens === 'number'
+                      ? (ext.token_usage as any).total_tokens
+                      : undefined;
+                if (relatedQuestions?.length || elapsedSeconds != null || totalTokens != null) {
+                  aiMessage.messageContext = {
+                    ...(relatedQuestions?.length ? { relatedQuestions } : {}),
+                    ...(elapsedSeconds != null ? { elapsedSeconds } : {}),
+                    ...(totalTokens != null ? { totalTokens } : {}),
+                  };
                 }
               }
 

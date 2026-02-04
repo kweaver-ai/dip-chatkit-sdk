@@ -1,13 +1,35 @@
 import { ChatKitBase, ChatKitBaseProps, ChatKitBaseState } from '../ChatKitBase';
-import { DrawerPortalProvider } from '../DrawerPortalContext';
-import { ToolBlockProvider } from '../ToolBlockContext';
+import { DrawerPortalProvider, useDrawerPortalContainer } from '../DrawerPortalContext';
+import { ToolBlockProvider, useToolBlockContext } from '../ToolBlockContext';
 import MessageList from './MessageList';
 import InputArea from './InputArea';
 import Prologue from './Prologue';
 import ConversationHistory from './ConversationHistory';
 import LeftHeaderTool from './LeftHeaderTool';
+import ToolDrawer from './blocks/ToolDrawer';
 import { MoreIcon, NewIcon } from '@/components/icons';
 import { ChatMessage, BlockType } from '../../../types';
+
+/**
+ * 单例 ToolDrawer 宿主：从 Context 读取抽屉状态与数据并渲染 ToolDrawer。
+ * 放在 AssistantBase 内、ToolBlockProvider 下，避免 ToolBlock 因虚拟滚动/消息更新重渲染导致抽屉状态重置。
+ */
+function ToolDrawerHost() {
+  const { drawerPayload, closeToolDrawer } = useToolBlockContext();
+  const container = useDrawerPortalContainer();
+  return (
+    <ToolDrawer
+      isOpen={!!drawerPayload}
+      onClose={closeToolDrawer}
+      toolName={drawerPayload?.toolName ?? ''}
+      toolTitle={drawerPayload?.toolTitle ?? ''}
+      toolIcon={drawerPayload?.toolIcon}
+      input={drawerPayload?.input}
+      output={drawerPayload?.output}
+      container={container ?? undefined}
+    />
+  );
+}
 
 /**
  * AssistantBase 组件的属性接口
@@ -154,6 +176,12 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
     }
   };
 
+  /** 点击相关问题：作为新问题发送 */
+  handleSelectQuestion = (question: string): void => {
+    if (!question?.trim() || this.state.isSending) return;
+    this.send(question.trim()).catch((err) => console.error('发送相关问题失败:', err));
+  };
+
   /**
    * 实现 React.Component.render() 方法
    * 渲染 Assistant 模式的界面
@@ -232,6 +260,7 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
                     streamingMessageId={streamingMessageId} 
                     agentAvatar={(this as any).agentInfo?.avatar}
                     onRegenerate={this.handleRegenerate}
+                    onSelectQuestion={this.handleSelectQuestion}
                   />
                 )}
               </div>
@@ -278,6 +307,9 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
               </div>
             )}
           </div>
+
+        {/* 内置工具抽屉单例：状态与数据来自 ToolBlockContext，不受 ToolBlock 重渲染影响 */}
+        <ToolDrawerHost />
 
         {/* 历史会话列表弹窗 */}
         {enableHistory && (

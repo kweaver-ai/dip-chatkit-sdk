@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, Text2MetricResult, AfSailorResult, DatasourceFilterResult, DatasourceRerankResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock, DefaultToolResult } from '../../types';
+import { ChatMessage, RoleType, ApplicationContext, ChatKitInterface, EventStreamMessage, OnboardingInfo, WebSearchQuery, ExecuteCodeResult, Text2SqlResult, Text2MetricResult, AfSailorResult, DatasourceFilterResult, DatasourceRerankResult, BlockType, MarkdownBlock, WebSearchBlock, ToolBlock, ChartDataSchema, Json2PlotBlock, DefaultToolResult, MessageContext } from '../../types';
 import { Text2SqlIcon, Text2MetricIcon, AfSailorIcon } from '../icons';
 
 /**
@@ -73,6 +73,12 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    */
   private isInitializing = false;
   private hasInitialized = false;
+
+  /**
+   * 流式响应时是否处于「按 chunk 批处理」中，避免同一 chunk 内多行事件触发多次 setState 导致 Maximum update depth exceeded
+   */
+  private _streamingBatch = false;
+  private _pendingStreamingUpdates: Array<(prev: ChatKitBaseState) => Partial<ChatKitBaseState>> = [];
 
   /**
    * 调用接口时携带的令牌
@@ -281,7 +287,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param text 要添加或更新的 Markdown 文本，每次都传完整的文本
    */
   protected appendMarkdownBlock(messageId: string, text: string): void {
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
           const lastBlock = msg.content.length > 0 ? msg.content[msg.content.length - 1] : null;
@@ -326,7 +332,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param query Web 搜索的执行详情
    */
   protected appendWebSearchBlock(messageId: string, query: WebSearchQuery): void {
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
           // 添加 Web 搜索块
@@ -354,7 +360,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param result 代码执行的输入和输出结果
    */
   protected appendExecuteCodeBlock(messageId: string, result: ExecuteCodeResult, consumeTime?: number): void {
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
           // 添加代码执行工具块
@@ -390,8 +396,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param consumeTime 耗时（毫秒），可选
    */
   protected appendText2SqlBlock(messageId: string, result: Text2SqlResult, consumeTime?: number): void {
-  
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
           // 添加 Text2SQL 工具块
@@ -429,7 +434,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param consumeTime 耗时（毫秒），可选
    */
   protected appendText2MetricBlock(messageId: string, result: Text2MetricResult, consumeTime?: number): void {
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
           // 添加 Text2Metric 工具块
@@ -467,7 +472,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     * @param consumeTime 耗时（毫秒），可选
     */
    protected appendJson2PlotBlock(messageId: string, chartData: ChartDataSchema, consumeTime?: number): void {
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
           // 添加 JSON2Plot 块
@@ -497,7 +502,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param consumeTime 耗时（毫秒），可选
    */
   protected appendAfSailorBlock(messageId: string, result: AfSailorResult, consumeTime?: number): void {
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
           // 添加 AfSailor 工具块
@@ -535,7 +540,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param consumeTime 耗时（毫秒），可选
    */
   protected appendDatasourceFilterBlock(messageId: string, result: DatasourceFilterResult, consumeTime?: number): void {
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
           // 添加 DatasourceFilter 工具块
@@ -573,7 +578,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * @param consumeTime 耗时（毫秒），可选
    */
   protected appendDatasourceRerankBlock(messageId: string, result: DatasourceRerankResult, consumeTime?: number): void {
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
           // 添加 DatasourceRerank 工具块
@@ -617,7 +622,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     result: DefaultToolResult,
     consumeTime?: number
   ): void {
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
           const newContent = [
@@ -645,6 +650,51 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
   }
 
   /**
+   * 更新指定消息的 messageContext（合并更新）
+   * 用于在流式过程中或流结束时写入相关问题、耗时、Token 等辅助信息
+   */
+  protected updateMessageContext(messageId: string, patch: Partial<MessageContext>): void {
+    this.applyStreamingUpdate((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId !== messageId) return msg;
+        const nextContext: MessageContext = {
+          ...(msg.messageContext || {}),
+          ...patch,
+        };
+        return { ...msg, messageContext: nextContext };
+      });
+      return { messages: newMessages };
+    });
+  }
+
+  /**
+   * 流式期间将状态更新入队，在 handleStreamResponse 每 chunk 结束时统一 flush，避免同一 chunk 内多行事件导致多次 setState 触发 Maximum update depth exceeded
+   */
+  protected applyStreamingUpdate(updater: (prev: ChatKitBaseState) => Partial<ChatKitBaseState>): void {
+    if (this._streamingBatch) {
+      this._pendingStreamingUpdates.push(updater);
+    } else {
+      this.setState((prev) => ({ ...prev, ...updater(prev) }));
+    }
+  }
+
+  /**
+   * 将当前批内的所有流式更新合并为一次 setState 执行
+   */
+  protected flushStreamingUpdates(): void {
+    if (this._pendingStreamingUpdates.length === 0) {
+      this._streamingBatch = false;
+      return;
+    }
+    const fns = this._pendingStreamingUpdates;
+    this._pendingStreamingUpdates = [];
+    this._streamingBatch = false;
+    this.setState((prev) =>
+      fns.reduce<ChatKitBaseState>((s, fn) => ({ ...s, ...fn(s) }), prev)
+    );
+  }
+
+  /**
    * 更新指定工具名称对应的最后一个工具块的结果（用于流式工具如 contextloader_data_enhanced 的组装）
    * @param messageId 消息 ID
    * @param toolName 工具名称
@@ -655,7 +705,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     toolName: string,
     result: DefaultToolResult
   ): void {
-    this.setState((prevState) => {
+    this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId !== messageId) return msg;
         const content = msg.content;
@@ -860,6 +910,10 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
         // 最后一个元素可能是不完整的行，保留在 buffer 中
         buffer = lines.pop() || '';
 
+        // 本 chunk 内多行事件只合并为一次 setState，避免 Maximum update depth exceeded
+        this._streamingBatch = true;
+        this._pendingStreamingUpdates = [];
+
         for (const line of lines) {
           const trimmedLine = line.trim();
           if (!trimmedLine) continue;
@@ -903,6 +957,8 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
             }
           }
         }
+
+        this.flushStreamingUpdates();
       }
 
       // 处理缓冲区中剩余的数据（如果有）
@@ -910,7 +966,9 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
         // 当前未对残留缓冲区做额外处理
       }
     } finally {
-      // 流式传输完成后,闭包会被丢弃
+      this.flushStreamingUpdates();
+      this._streamingBatch = false;
+      this._pendingStreamingUpdates = [];
       reader.releaseLock();
     }
 

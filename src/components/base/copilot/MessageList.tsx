@@ -13,6 +13,8 @@ interface MessageListProps {
   streamingMessageId?: string | null;
   /** 重新生成回调函数 */
   onRegenerate?: (messageId: string, previousUserMessage: ChatMessage) => Promise<void>;
+  /** 点击相关问题时的回调（用于继续提问） */
+  onSelectQuestion?: (question: string) => void;
 }
 
 /** List 外层滚动容器 */
@@ -28,13 +30,103 @@ const BOTTOM_GAP = 24;
 /** 当前容器纵向 padding（px），用 Tailwind py-[24px] 实现 */
 const CONTAINER_PADDING_VERTICAL_PX = 24;
 
-const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId, onRegenerate }) => {
+/**
+ * 单行消息组件（抽离到外部，避免在 MessageList 内联定义导致流式时每轮 re-render 都生成新组件类型，
+ * 进而造成所有行 unmount/remount 和 useLayoutEffect 重复执行，触发 Maximum update depth exceeded）
+ */
+interface MessageRowProps {
+  index: number;
+  style: React.CSSProperties;
+  message: ChatMessage | undefined;
+  streamingMessageId: string | null | undefined;
+  onRegenerateClick: ((messageId: string) => Promise<void>) | undefined;
+  isLastAssistantMessage: boolean;
+  onSelectQuestion?: (question: string) => void;
+  sizeMapRef: React.MutableRefObject<Record<string, number>>;
+  listRef: React.RefObject<List | null>;
+}
+const MessageRow: React.FC<MessageRowProps> = ({
+  index,
+  style,
+  message,
+  streamingMessageId,
+  onRegenerateClick,
+  isLastAssistantMessage,
+  onSelectQuestion,
+  sizeMapRef,
+  listRef,
+}) => {
+  const rowRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const element = rowRef.current;
+    if (!element || !message) return;
+
+    const measure = () => {
+      const rect = element.getBoundingClientRect();
+      if (!rect.height) return;
+
+      const prevSize = sizeMapRef.current[message.messageId];
+      if (prevSize !== rect.height) {
+        sizeMapRef.current[message.messageId] = rect.height;
+        if (listRef.current) {
+          listRef.current.resetAfterIndex(index);
+        }
+      }
+    };
+
+    measure();
+
+    const resizeObserver = new ResizeObserver(() => {
+      measure();
+    });
+
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [index, message?.messageId, sizeMapRef, listRef]);
+
+  if (!message) return null;
+
+  return (
+    <div style={style}>
+      <div ref={rowRef} className="px-4">
+        <MessageItem
+          key={message.messageId}
+          message={message}
+          isStreaming={message.messageId === streamingMessageId}
+          onRegenerate={onRegenerateClick}
+          isLastAssistantMessage={isLastAssistantMessage}
+          onSelectQuestion={onSelectQuestion}
+        />
+      </div>
+    </div>
+  );
+};
+
+const MessageList: React.FC<MessageListProps> = ({
+  messages,
+  streamingMessageId,
+  onRegenerate,
+  onSelectQuestion,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<List>(null);
   const outerRef = useRef<HTMLDivElement | null>(null);
   const [listHeight, setListHeight] = useState<number>(0);
   const sizeMapRef = useRef<Record<string, number>>({});
   const isAtBottomRef = useRef<boolean>(true);
+
+  const lastAssistantIndex = React.useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role.type === RoleType.ASSISTANT) {
+        return i;
+      }
+    }
+    return -1;
+  }, [messages]);
 
   const updateContainerHeight = () => {
     const el = containerRef.current?.parentElement;
@@ -113,56 +205,6 @@ const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId,
     }
   }, []);
 
-  const Row: React.FC<{ index: number; style: React.CSSProperties }> = ({ index, style }) => {
-    const message = messages[index];
-    const rowRef = useRef<HTMLDivElement | null>(null);
-
-    useLayoutEffect(() => {
-      const element = rowRef.current;
-      if (!element || !message) return;
-
-      const measure = () => {
-        const rect = element.getBoundingClientRect();
-        if (!rect.height) return;
-
-        const prevSize = sizeMapRef.current[message.messageId];
-        if (prevSize !== rect.height) {
-          sizeMapRef.current[message.messageId] = rect.height;
-          if (listRef.current) {
-            listRef.current.resetAfterIndex(index);
-          }
-        }
-      };
-
-      measure();
-
-      const resizeObserver = new ResizeObserver(() => {
-        measure();
-      });
-
-      resizeObserver.observe(element);
-
-      return () => {
-        resizeObserver.disconnect();
-      };
-    }, [index, message?.messageId]);
-
-    if (!message) return null;
-
-    return (
-      <div style={style}>
-        <div ref={rowRef} className="px-4">
-          <MessageItem
-            key={message.messageId}
-            message={message}
-            isStreaming={message.messageId === streamingMessageId}
-            onRegenerate={onRegenerate ? (messageId) => handleRegenerate(messageId, index) : undefined}
-          />
-        </div>
-      </div>
-    );
-  };
-
   const scrollAreaHeight = listHeight - CONTAINER_PADDING_VERTICAL_PX * 2;
 
   return (
@@ -180,7 +222,17 @@ const MessageList: React.FC<MessageListProps> = ({ messages, streamingMessageId,
           onScroll={handleScroll}
         >
           {({ index, style }: { index: number; style: React.CSSProperties }) => (
-            <Row index={index} style={style} />
+            <MessageRow
+              index={index}
+              style={style}
+              message={messages[index]}
+              streamingMessageId={streamingMessageId}
+              onRegenerateClick={onRegenerate ? (messageId) => handleRegenerate(messageId, index) : undefined}
+              isLastAssistantMessage={index === lastAssistantIndex}
+              onSelectQuestion={onSelectQuestion}
+              sizeMapRef={sizeMapRef}
+              listRef={listRef}
+            />
           )}
         </List>
       )}
