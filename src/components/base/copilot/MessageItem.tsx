@@ -179,71 +179,44 @@ const MessageItem: React.FC<MessageItemProps> = ({
         </div>
 
         {/* 底部操作区：复制 / 重新生成 / 统计信息 */}
-        {!isStreaming && hasContent() && (
-          isUser ? (
-            <div
-              className={`flex items-center gap-[8px] justify-end ${
-                'opacity-0 group-hover:opacity-100 transition-opacity'
-              }`}
+        { !isUser && !isStreaming && hasContent() && (
+          <div className="flex items-center justify-between gap-[8px]">
+          <div className="flex items-center gap-[8px]">
+            {/* 复制按钮 */}
+            <button
+              onClick={async () => {
+                const success = await copyMessageContent(message)
+                if (success) {
+                  setCopySuccess(true)
+                  setTimeout(() => setCopySuccess(false), 1000)
+                }
+              }}
+              className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] hover:bg-[rgba(0,0,0,0.05)]"
+              title={copySuccess ? '已复制' : '复制'}
             >
-              {/* 复制按钮 */}
-              <button
-                onClick={async () => {
-                  const success = await copyMessageContent(message)
-                  if (success) {
-                    setCopySuccess(true)
-                    setTimeout(() => setCopySuccess(false), 1000)
-                  }
-                }}
-                className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] hover:bg-[rgba(0,0,0,0.05)]"
-                title={copySuccess ? '已复制' : '复制'}
-              >
-                <CopyIcon
-                  className={`w-[14px] h-[14px] ${
-                    copySuccess ? 'text-[#126EE3]' : 'text-[rgba(0,0,0,0.45)]'
-                  }`}
-                />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-[8px]">
-              <div className="flex items-center gap-[8px]">
-                {/* 复制按钮 */}
-                <button
-                  onClick={async () => {
-                    const success = await copyMessageContent(message)
-                    if (success) {
-                      setCopySuccess(true)
-                      setTimeout(() => setCopySuccess(false), 1000)
-                    }
-                  }}
-                  className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] hover:bg-[rgba(0,0,0,0.05)]"
-                  title={copySuccess ? '已复制' : '复制'}
-                >
-                  <CopyIcon
-                    className={`w-[14px] h-[14px] ${
-                      copySuccess ? 'text-[#126EE3]' : 'text-[rgba(0,0,0,0.45)]'
-                    }`}
-                  />
-                </button>
-
-                {/* 重新生成按钮（仅助手消息） */}
-                {onRegenerate && (
-                  <RegenerateButton
-                    messageId={message.messageId}
-                    onRegenerate={onRegenerate}
-                    disabled={isStreaming}
-                  />
-                )}
-              </div>
-
-              {/* 耗时 & Token 统计信息（仅助手消息） */}
-              <MessageStatsBar
-                elapsedSeconds={message.messageContext?.elapsedSeconds}
-                totalTokens={message.messageContext?.totalTokens}
+              <CopyIcon
+                className={`w-[14px] h-[14px] ${
+                  copySuccess ? 'text-[#126EE3]' : 'text-[rgba(0,0,0,0.45)]'
+                }`}
               />
-            </div>
-          )
+            </button>
+
+            {/* 重新生成按钮（仅助手消息） */}
+            {onRegenerate && isLastAssistantMessage && (
+              <RegenerateButton
+                messageId={message.messageId}
+                onRegenerate={onRegenerate}
+                disabled={isStreaming}
+              />
+            )}
+          </div>
+
+          {/* 耗时 & Token 统计信息（仅助手消息） */}
+          <MessageStatsBar
+            elapsedSeconds={message.messageContext?.elapsedSeconds}
+            totalTokens={message.messageContext?.totalTokens}
+          />
+        </div>
         )}
            {!isUser && isLastAssistantMessage && !isStreaming && (
             <RelatedQuestions
