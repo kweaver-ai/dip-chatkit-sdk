@@ -33,7 +33,7 @@ const RelatedQuestions: React.FC<RelatedQuestionsProps> = ({
       className={`flex flex-wrap gap-[8px] ${className} flex-col`}
       style={{ fontFamily: 'Noto Sans SC' }}
     >
-      <div className="flex flex-col gap-[8px]">是否继续提问：</div>
+      <div className="flex flex-col gap-[8px]">您是否想了解下面的内容：</div>
       {questions.map((question, index) => (
         <button
           key={`${question}-${index}`}

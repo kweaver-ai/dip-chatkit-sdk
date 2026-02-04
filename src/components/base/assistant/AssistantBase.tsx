@@ -212,8 +212,8 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
             }}
             className="flex h-full w-full bg-white"
           >
-            {/* 左侧栏 - Agent 信息和知识来源 */}
-            <div className="flex-initial flex px-4 py-3 ">
+            {/* 左侧栏 - Agent 信息和知识来源（relative z-10 确保展开层高于中间问答内容） */}
+            <div className="relative z-10 flex-initial flex px-4 py-3">
             <LeftHeaderTool
               agentInfo={(this as any).agentInfo || {}}
               apiMethods={

@@ -93,13 +93,30 @@ const MessageItem: React.FC<MessageItemProps> = ({
     block: { type: string; content: unknown },
     relatedQuestions: string[] | undefined
   ): boolean => {
-    if (!relatedQuestions?.length) return false
-    if (block.type !== BlockType.TEXT && block.type !== BlockType.MARKDOWN) return false
+    // 仅 TEXT / MARKDOWN 类型才可能是相关问题块
+    if (
+      block.type !== BlockType.TEXT &&
+      block.type !== BlockType.MARKDOWN
+    ) {
+      return false
+    }
+
     const s = typeof block.content === 'string' ? block.content.trim() : ''
     if (!s) return false
+
     try {
       const arr = JSON.parse(s) as unknown
-      if (!Array.isArray(arr) || arr.length !== relatedQuestions.length) return false
+      if (!Array.isArray(arr)) return false
+
+      // 场景 1：后端给了一个 "[]" 的 JSON 字符串，但前端没有 relatedQuestions，
+      // 这时我们认为它是「空的相关问题占位」，不需要渲染出来。
+      if (!relatedQuestions?.length) {
+        return arr.length === 0
+      }
+
+      // 场景 2：后端把 related_queries 以 JSON 数组字符串的形式放在 content 里，
+      // 并且我们已经通过 messageContext.relatedQuestions 展示了，这里就不再渲染。
+      if (arr.length !== relatedQuestions.length) return false
       return arr.every((x, i) => x === relatedQuestions[i])
     } catch {
       return false
@@ -120,6 +137,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
     // 如果 content 是数组，则渲染 Block 数组
     if (Array.isArray(message.content)) {
       const relatedQuestions = message.messageContext?.relatedQuestions
+      console.log(message.content ,'message.content')
       return (
         <div className="space-y-2">
           {message.content.map((block, index) => {
@@ -199,69 +217,48 @@ const MessageItem: React.FC<MessageItemProps> = ({
         </div>
 
         {/* 底部操作区：复制 / 重新生成 / 统计信息 */}
-        {!isStreaming && hasContent() && (
-          isUser ? (
-            <div
-              className={`flex items-center gap-2 justify-end ${
-                'opacity-0 group-hover:opacity-100 transition-opacity'
-              }`}
-            >
-              {/* 复制按钮 */}
-              <button
-                onClick={handleCopy}
-                className="flex items-center justify-center w-[24px] h-[24px] rounded hover:bg-[rgba(0,0,0,0.05)]"
-                title={copySuccess ? '已复制' : '复制'}
-              >
-                <CopyIcon
-                  className={`w-[14px] h-[14px] ${
-                    copySuccess ? 'text-[#126EE3]' : 'text-[rgba(0,0,0,0.45)]'
-                  }`}
-                />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                {/* 复制按钮 */}
-                <button
-                  onClick={handleCopy}
-                  className="flex items-center justify-center w-[24px] h-[24px] rounded hover:bg-[rgba(0,0,0,0.05)]"
-                  title={copySuccess ? '已复制' : '复制'}
-                >
-                  <CopyIcon
-                    className={`w-[14px] h-[14px] ${
-                      copySuccess ? 'text-[#126EE3]' : 'text-[rgba(0,0,0,0.45)]'
-                    }`}
-                  />
-                </button>
+        {!isUser && !isStreaming && hasContent() && (
+           <div className="flex items-center justify-between gap-2">
+           <div className="flex items-center gap-2">
+             {/* 复制按钮 */}
+             <button
+               onClick={handleCopy}
+               className="flex items-center justify-center w-[24px] h-[24px] rounded hover:bg-[rgba(0,0,0,0.05)]"
+               title={copySuccess ? '已复制' : '复制'}
+             >
+               <CopyIcon
+                 className={`w-[14px] h-[14px] ${
+                   copySuccess ? 'text-[#126EE3]' : 'text-[rgba(0,0,0,0.45)]'
+                 }`}
+               />
+             </button>
 
-                {/* 重新生成按钮（仅助手消息） */}
-                {onRegenerate && (
-                  <RegenerateButton
-                    messageId={message.messageId}
-                    onRegenerate={onRegenerate}
-                    disabled={isStreaming}
-                  />
-                )}
-              </div>
+             {/* 重新生成按钮（仅助手消息） */}
+             {onRegenerate && isLastAssistantMessage && (
+               <RegenerateButton
+                 messageId={message.messageId}
+                 onRegenerate={onRegenerate}
+                 disabled={isStreaming}
+               />
+             )}
+           </div>
 
-              {/* 耗时 & Token 统计信息（仅助手消息） */}
-              <MessageStatsBar
-                elapsedSeconds={message.messageContext?.elapsedSeconds}
-                totalTokens={message.messageContext?.totalTokens}
-              />
-            </div>
-          )
+           {/* 耗时 & Token 统计信息（仅助手消息） */}
+           <MessageStatsBar
+             elapsedSeconds={message.messageContext?.elapsedSeconds}
+             totalTokens={message.messageContext?.totalTokens}
+           />
+         </div>
         )}
 
         {/* 相关问题（仅最后一条助手消息、非流式中且有待展示时） */}
         {!isUser && isLastAssistantMessage && !isStreaming && (
-            <RelatedQuestions
-              questions={message.messageContext?.relatedQuestions ?? []}
-              onSelectQuestion={onSelectQuestion}
-              className="mt-2"
-            />
-          )}
+          <RelatedQuestions
+            questions={message.messageContext?.relatedQuestions ?? []}
+            onSelectQuestion={onSelectQuestion}
+            className="mt-2"
+          />
+        )}
       </div>
       
      

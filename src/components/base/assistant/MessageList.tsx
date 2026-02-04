@@ -30,6 +30,8 @@ const ESTIMATED_ITEM_SIZE = 120;
 const FOLLOW_BOTTOM_THRESHOLD = 80;
 /** 列表底部与输入区之间的留白（px） */
 const BOTTOM_GAP = 24;
+/** 每项之间的间距（px） */
+const ITEM_GAP = 24;
 /** 当前容器纵向 padding（px），用 Tailwind py-[24px] 实现 */
 const CONTAINER_PADDING_VERTICAL_PX = 24;
 
@@ -181,8 +183,8 @@ const MessageList: React.FC<MessageListProps> = ({
 
   const getItemSize = (index: number) => {
     const message = messages[index];
-    if (!message) return ESTIMATED_ITEM_SIZE;
-    return sizeMapRef.current[message.messageId] || ESTIMATED_ITEM_SIZE;
+    if (!message) return ESTIMATED_ITEM_SIZE + ITEM_GAP;
+    return (sizeMapRef.current[message.messageId] || ESTIMATED_ITEM_SIZE) + ITEM_GAP;
   };
 
   const handleScroll = (props: ListOnScrollProps) => {

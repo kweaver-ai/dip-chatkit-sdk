@@ -87,7 +87,8 @@ const KnowledgeSource: React.FC<KnowledgeSourceProps> = ({
       {/* 下拉容器 */}
       {expanded && (
         <div
-          className="absolute left-0 w-[260px] bg-[rgba(255,255,255,1)] border border-[rgba(0,0,0,0.1)] rounded-[6px] shadow-lg z-50 flex flex-col overflow-hidden"
+          // z-index 需要低于 ToolDrawer 遮罩层（z-40），避免被遮罩层下方“穿透”
+          className="absolute left-0 w-[260px] bg-[rgba(255,255,255,1)] border border-[rgba(0,0,0,0.1)] rounded-[6px] shadow-lg z-30 flex flex-col overflow-hidden"
           style={{
             fontFamily: 'Noto Sans SC',
             top: '54px', // 按钮高度 38px + 间距 16px
