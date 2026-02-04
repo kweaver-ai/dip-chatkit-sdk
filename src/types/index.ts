@@ -116,6 +116,20 @@ export interface ToolBlockRegistration {
 export interface Json2PlotBlock extends ContentBlock<BlockType.JSON2PLOT, ChartDataSchema> {}
 
 /**
+ * 单条消息的扩展上下文（不参与流式内容渲染，用于相关问题、耗时、Token 等）
+ */
+export interface MessageContext {
+  /** 相关推荐问题列表，来自 message.ext.related_queries */
+  relatedQuestions?: string[];
+
+  /** 本次回答耗时（秒），用于展示「耗时: xx.xxs」 */
+  elapsedSeconds?: number;
+
+  /** Token 总数，用于展示「Token: x,xxx」 */
+  totalTokens?: number;
+}
+
+/**
  * 消息接口
  * 展示在消息区消息列表中的一条消息
  */
@@ -131,10 +145,12 @@ export interface ChatMessage {
 
   /** 该条消息的内容。一条消息可以由许多不同类型的消息块组成 */
   content: Array<TextBlock | MarkdownBlock | WebSearchBlock | ToolBlock | Json2PlotBlock>;
- 
 
   /** 与该消息关联的应用上下文（可选），仅用户消息可能包含此字段 */
   applicationContext?: ApplicationContext;
+
+  /** 消息扩展上下文：相关问题、耗时、Token 等，仅助手消息在流结束后可能包含 */
+  messageContext?: MessageContext;
 }
 
 /**

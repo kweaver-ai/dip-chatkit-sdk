@@ -4,6 +4,8 @@ import { TextBlock, MarkdownBlock, WebSearchBlock, ToolBlock } from './blocks'
 import { AssistantIcon, CopyIcon } from '../../icons'
 import { copyMessageContent } from '../../../utils/copyMessage'
 import RegenerateButton from './RegenerateButton'
+import MessageStatsBar from './MessageStatsBar'
+import RelatedQuestions from './RelatedQuestions'
 
 /**
  * MessageItem 组件的属性接口
@@ -15,6 +17,10 @@ interface MessageItemProps {
   isStreaming?: boolean
   /** 重新生成回调函数 */
   onRegenerate?: (messageId: string) => Promise<void>
+  /** 是否为最后一条助手消息（用于展示相关问题） */
+  isLastAssistantMessage?: boolean
+  /** 点击相关问题时的回调（用于继续提问） */
+  onSelectQuestion?: (question: string) => void
 }
 
 /**
@@ -25,6 +31,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isStreaming = false,
   onRegenerate,
+  isLastAssistantMessage = false,
+  onSelectQuestion,
 }) => {
   const isUser = message.role.type === RoleType.USER
   const [copySuccess, setCopySuccess] = useState(false)
@@ -64,8 +72,29 @@ const MessageItem: React.FC<MessageItemProps> = ({
   }
 
   /**
+   * 判断是否为「相关问题」的重复文本块（来自后端通过 content 下发的 related_queries，已在 messageContext.relatedQuestions 中展示，不再用 TextBlock/MarkdownBlock 渲染）
+   */
+  const isRelatedQuestionsBlock = (
+    block: { type: string; content: unknown },
+    relatedQuestions: string[] | undefined
+  ): boolean => {
+    if (!relatedQuestions?.length) return false
+    if (block.type !== BlockType.TEXT && block.type !== BlockType.MARKDOWN) return false
+    const s = typeof block.content === 'string' ? block.content.trim() : ''
+    if (!s) return false
+    try {
+      const arr = JSON.parse(s) as unknown
+      if (!Array.isArray(arr) || arr.length !== relatedQuestions.length) return false
+      return arr.every((x, i) => x === relatedQuestions[i])
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * 渲染消息内容块
    * 根据不同的 BlockType 使用不同的组件进行渲染
+   * 注意：与 messageContext.relatedQuestions 重复的 TEXT/MARKDOWN 块不渲染，由 RelatedQuestions 组件单独展示
    */
   const renderContentBlocks = () => {
     // 如果正在流式更新且没有内容，显示预加载 UI
@@ -75,9 +104,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
     // 如果 content 是数组，则渲染 Block 数组
     if (Array.isArray(message.content)) {
+      const relatedQuestions = message.messageContext?.relatedQuestions
       return (
         <div className="space-y-[8px]">
           {message.content.map((block, index) => {
+            if (isRelatedQuestionsBlock(block, relatedQuestions)) return null
             switch (block.type) {
               case BlockType.TEXT:
                 return <TextBlock key={index} block={block} />
@@ -143,48 +174,84 @@ const MessageItem: React.FC<MessageItemProps> = ({
           style={{ fontFamily: 'Noto Sans SC' }}
         >
           {renderContentBlocks()}
+          {/* 相关问题（仅最后一条助手消息、非流式中且有待展示时） */}
+       
         </div>
 
-        {/* 复制按钮和重新生成按钮 */}
+        {/* 底部操作区：复制 / 重新生成 / 统计信息 */}
         {!isStreaming && hasContent() && (
-          <div
-            className={`flex items-center gap-[8px] ${isUser ? 'justify-end' : 'justify-start'} ${
-              isUser
-                ? 'opacity-0 group-hover:opacity-100 transition-opacity'
-                : ''
-            }`}
-          >
-           
-            
-            {/* 复制按钮 */}
-            <button
-              onClick={async () => {
-                const success = await copyMessageContent(message)
-                if (success) {
-                  setCopySuccess(true)
-                  setTimeout(() => setCopySuccess(false), 1000)
-                }
-              }}
-              className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] hover:bg-[rgba(0,0,0,0.05)]"
-              title={copySuccess ? '已复制' : '复制'}
+          isUser ? (
+            <div
+              className={`flex items-center gap-[8px] justify-end ${
+                'opacity-0 group-hover:opacity-100 transition-opacity'
+              }`}
             >
-              <CopyIcon
-                className={`w-[14px] h-[14px] ${
-                  copySuccess ? 'text-[#126EE3]' : 'text-[rgba(0,0,0,0.45)]'
-                }`}
-              />
-            </button>
+              {/* 复制按钮 */}
+              <button
+                onClick={async () => {
+                  const success = await copyMessageContent(message)
+                  if (success) {
+                    setCopySuccess(true)
+                    setTimeout(() => setCopySuccess(false), 1000)
+                  }
+                }}
+                className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] hover:bg-[rgba(0,0,0,0.05)]"
+                title={copySuccess ? '已复制' : '复制'}
+              >
+                <CopyIcon
+                  className={`w-[14px] h-[14px] ${
+                    copySuccess ? 'text-[#126EE3]' : 'text-[rgba(0,0,0,0.45)]'
+                  }`}
+                />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-[8px]">
+              <div className="flex items-center gap-[8px]">
+                {/* 复制按钮 */}
+                <button
+                  onClick={async () => {
+                    const success = await copyMessageContent(message)
+                    if (success) {
+                      setCopySuccess(true)
+                      setTimeout(() => setCopySuccess(false), 1000)
+                    }
+                  }}
+                  className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] hover:bg-[rgba(0,0,0,0.05)]"
+                  title={copySuccess ? '已复制' : '复制'}
+                >
+                  <CopyIcon
+                    className={`w-[14px] h-[14px] ${
+                      copySuccess ? 'text-[#126EE3]' : 'text-[rgba(0,0,0,0.45)]'
+                    }`}
+                  />
+                </button>
 
-             {/* 重新生成按钮（仅助手消息） */}
-             {!isUser && onRegenerate && (
-              <RegenerateButton
-                messageId={message.messageId}
-                onRegenerate={onRegenerate}
-                disabled={isStreaming}
+                {/* 重新生成按钮（仅助手消息） */}
+                {onRegenerate && (
+                  <RegenerateButton
+                    messageId={message.messageId}
+                    onRegenerate={onRegenerate}
+                    disabled={isStreaming}
+                  />
+                )}
+              </div>
+
+              {/* 耗时 & Token 统计信息（仅助手消息） */}
+              <MessageStatsBar
+                elapsedSeconds={message.messageContext?.elapsedSeconds}
+                totalTokens={message.messageContext?.totalTokens}
               />
-            )}
-          </div>
+            </div>
+          )
         )}
+           {!isUser && isLastAssistantMessage && !isStreaming && (
+            <RelatedQuestions
+              questions={message.messageContext?.relatedQuestions ?? []}
+              onSelectQuestion={onSelectQuestion}
+              className="mt-2"
+            />
+          )}
       </div>
     </div>
   )

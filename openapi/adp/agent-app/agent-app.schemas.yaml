@@ -71,7 +71,7 @@ components:
 
     EventMessage:
       type: object
-      desciption: Event Stream Message
+      description: Event Stream 消息，用于流式更新消息树上的节点
       properties:
         seq_id:
           type: integer
@@ -80,9 +80,9 @@ components:
           type: array
           items:
             oneOf:
-            - type: string
-            - type: integer
-          description: 要操作的对象的属性路径。数字表示数组下标，字符串表示对象属性名
+              - type: string
+              - type: integer
+          description: 要操作的对象的属性路径。数字表示数组下标，字符串表示对象属性名。例如 ["message","ext","related_queries"] 表示 message.ext.related_queries
         action:
           type: string
           enum: [append, upsert]
@@ -91,15 +91,28 @@ components:
               - append：向数组追加元素或在文本后追加内容
               - upsert：插入对象属性
         content:
-          type: 
-            oneOf:
+          oneOf:
             - type: string
             - type: integer
+            - $ref: "#/components/schemas/RelatedQueriesContent"
             - $ref: "#/components/schemas/Message"
             - $ref: "#/components/schemas/Progress"
             - $ref: "#/components/schemas/LLMAnswer"
             - $ref: "#/components/schemas/ToolAnswer"
           description: 表示要 upsert 或 append 的内容
+      required:
+        - seq_id
+        - key
+        - action
+        - content
+
+    # 当 key 为 ["message","ext","related_queries"] 且 action 为 "upsert" 时，content 为该格式
+    RelatedQueriesContent:
+      type: array
+      description: 相关推荐问题列表，用于 message.ext.related_queries 的 upsert
+      items:
+        type: string
+      example: ["过去两年销量增长最快的消费品牌是哪家？", "品牌销量的具体同比增长率是多少？", "相比今年，去年有哪些品牌销量下降？"]
     
     Message:
       index:
