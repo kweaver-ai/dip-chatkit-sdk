@@ -164,6 +164,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       // 从 props 中提取 DIP 相关配置
       const props = args[0] as DIPBaseProps;
 
+
       this.dipBaseUrl = props.baseUrl || 'https://dip.aishu.cn/api/agent-app/v1';
       this.dipKey = props.agentKey;
       this.dipVersion = props.agentVersion || 'latest';
@@ -171,6 +172,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       this.dipBusinessDomain = props.businessDomain || 'bd_public';
       this.dipToken = props.token || '';
       this.dipRefreshToken = props.refreshToken;
+      console.log(  this.dipBusinessDomain ,'  this.dipBusinessDomain')
 
       // 向后兼容：如果传入了 bearerToken 但没有 token，从 bearerToken 中提取 token
       if (props.bearerToken && !props.token) {
@@ -285,6 +287,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
               headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${this.dipToken}`,
+                'x-business-domain': this.dipBusinessDomain,
               },
               body: JSON.stringify(requestBody),
             }
@@ -363,6 +366,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
               'Content-Type': 'application/json',
               Accept: 'text/event-stream',
               Authorization: `Bearer ${this.dipToken}`,
+              'x-business-domain': this.dipBusinessDomain,
             },
             body: JSON.stringify(body),
           }
@@ -2055,35 +2059,37 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     /**
      * 终止会话
      * 调用 DIP 的 /app/{agent_key}/chat/termination 接口终止指定会话
+     * 若返回 401 会先调用 refreshToken 获取新 token 并重试一次
      * @param conversationId 要终止的会话 ID
      * @returns 返回 Promise，成功时 resolve，失败时 reject
      */
     public async terminateConversation(conversationId: string): Promise<void> {
       const url = `${this.dipBaseUrl}/app/${this.dipKey}/chat/termination`;
 
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
+      await this.executeDataAgentWithTokenRefresh(async () => {
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          Authorization: this.dipToken.startsWith('Bearer ') ? this.dipToken : `Bearer ${this.dipToken}`,
+        };
 
-      // 添加 Authorization header
-      if (this.dipToken) {
-        headers['Authorization'] = this.dipToken.startsWith('Bearer ') ? this.dipToken : `Bearer ${this.dipToken}`;
-      }
+        const body = JSON.stringify({
+          conversation_id: conversationId,
+        });
 
-      const body = JSON.stringify({
-        conversation_id: conversationId,
+        const response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          const error: any = new Error(`终止会话失败: ${response.status} ${errorText}`);
+          error.status = response.status;
+          error.body = errorText;
+          throw error;
+        }
       });
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`终止会话失败: ${response.status} ${errorText}`);
-      }
     }
 
     /**
@@ -2159,6 +2165,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${this.dipToken}`,
+              'x-business-domain': this.dipBusinessDomain,
             },
           });
 
@@ -2213,6 +2220,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${this.dipToken}`,
+              'x-business-domain': this.dipBusinessDomain,
             },
           });
 
@@ -2354,6 +2362,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${this.dipToken}`,
+              'x-business-domain': this.dipBusinessDomain,
             },
           });
 
