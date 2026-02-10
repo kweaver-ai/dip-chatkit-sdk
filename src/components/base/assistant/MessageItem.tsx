@@ -137,7 +137,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
     // 如果 content 是数组，则渲染 Block 数组
     if (Array.isArray(message.content)) {
       const relatedQuestions = message.messageContext?.relatedQuestions
-      console.log(message.content ,'message.content')
       return (
         <div className="space-y-2">
           {message.content.map((block, index) => {

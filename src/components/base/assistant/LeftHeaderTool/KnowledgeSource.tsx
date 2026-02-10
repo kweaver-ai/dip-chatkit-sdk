@@ -35,7 +35,7 @@ const KnowledgeSource: React.FC<KnowledgeSourceProps> = ({
   metricIds = [],
   apiMethods,
 }) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // // 点击外部区域关闭
@@ -93,6 +93,7 @@ const KnowledgeSource: React.FC<KnowledgeSourceProps> = ({
             fontFamily: 'Noto Sans SC',
             top: '54px', // 按钮高度 38px + 间距 16px
             height: 'calc(100% - 70px)',
+            backgroundColor: 'rgba(255,255,255,1)',
           }}
         >
           {/* 标题栏 */}

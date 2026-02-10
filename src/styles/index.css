@@ -427,3 +427,83 @@ pre.hljs {
 .task-dot:nth-child(5) {
   animation-delay: 0.5s;
 }
+
+/* 停止按钮四层矩形旋转动画 */
+@keyframes stop-button-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 按钮根容器：仅负责居中四层结构 */
+.stop-button-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border-radius: 6px;
+  overflow: visible;
+}
+
+/* 1. 最外层矩形：纯白色，不旋转 */
+.stop-button-outer {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  background-color: #ffffff;
+  overflow: hidden; /* 裁剪第二层超出的部分 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 2. 第二层：外切圆形（近似），1/3 蓝色 + 2/3 白色，围绕圆心旋转 */
+.stop-button-ring {
+  position: absolute;
+  width: calc(100% + 10px);   /* 比父元素宽高都大一圈，例如多 8px */
+  height: calc(100% + 10px);
+  border-radius: 50%;
+  background: conic-gradient(
+    #126ee3 0deg 120deg, /* 约 1/3 蓝色区域 */
+    #ffffff 120deg 360deg
+  );
+  will-change: transform;
+  animation: stop-button-spin 1.6s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 3. 第三层：白色矩形，不旋转，宽度 = 最外层宽度 - 4px */
+.stop-button-middle {
+  position: relative;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 4. 最内侧矩形：8px 蓝色方块，不旋转 */
+.stop-button-inner {
+  width: 8px;
+  height: 8px;
+  background-color: #126ee3;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(18, 110, 227, 0.8);
+}
+
+/* Stop 图标保持在所有矩形之上 */
+.stop-button-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}

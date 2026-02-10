@@ -1,6 +1,6 @@
 import React from 'react';
 import { ApplicationContext } from '../../../types';
-import { CloseIcon, StopIcon, SendIcon } from '../../icons';
+import { CloseIcon,  SendIcon } from '../../icons';
 import TaskInProgress from './TaskInProgress';
 
 /**
@@ -107,10 +107,17 @@ const InputArea: React.FC<InputAreaProps> = ({
           // 停止按钮：在接收 AI 流式响应时显示
           <button
             onClick={onStop}
-            className="absolute bottom-3 right-4 w-8 h-8 flex items-center justify-center bg-[#126EE3] hover:bg-[#126EE3] rounded-md transition-colors"
+            className="absolute bottom-3 right-4 w-[32px] h-[32px] rounded-md transition-colors stop-button-loading"
             title="停止响应"
           >
-            <StopIcon />
+            {/* 四层矩形结构：外白 -> 旋转环 -> 内白 -> 最内侧 8px 蓝色矩形 */}
+            <div className="stop-button-outer">
+            <div className="stop-button-ring" />
+            <div className="stop-button-middle">
+                  <div className="stop-button-inner" />
+                </div>
+              
+            </div>
           </button>
         ) : (
           // 发送按钮：正常状态下显示
