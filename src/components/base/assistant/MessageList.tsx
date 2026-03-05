@@ -1,5 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { VariableSizeList as List, ListOnScrollProps } from 'react-window';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { ChatMessage, RoleType } from '../../../types';
 import MessageItem from './MessageItem';
 
@@ -20,99 +19,9 @@ interface MessageListProps {
   onSelectQuestion?: (question: string) => void;
 }
 
-/** List 外层滚动容器 */
-const ScrollOuter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  (props, ref) => <div ref={ref} {...props} />
-);
-ScrollOuter.displayName = 'ScrollOuter';
-
-const ESTIMATED_ITEM_SIZE = 120;
 const FOLLOW_BOTTOM_THRESHOLD = 80;
 /** 列表底部与输入区之间的留白（px） */
 const BOTTOM_GAP = 24;
-/** 每项之间的间距（px） */
-const ITEM_GAP = 24;
-/** 当前容器纵向 padding（px），用 Tailwind py-[24px] 实现 */
-const CONTAINER_PADDING_VERTICAL_PX = 24;
-
-/**
- * 单行消息组件（抽离到外部，避免在 MessageList 内联定义导致流式时每轮 re-render 都生成新组件类型，
- * 进而造成所有行 unmount/remount 和 useLayoutEffect 重复执行，触发 Maximum update depth exceeded）
- */
-interface MessageRowProps {
-  index: number;
-  style: React.CSSProperties;
-  message: ChatMessage | undefined;
-  streamingMessageId: string | null | undefined;
-  agentAvatar?: string;
-  onRegenerateClick: ((messageId: string) => Promise<void>) | undefined;
-  isLastAssistantMessage: boolean;
-  onSelectQuestion?: (question: string) => void;
-  sizeMapRef: React.MutableRefObject<Record<string, number>>;
-  listRef: React.RefObject<List | null>;
-}
-const MessageRow: React.FC<MessageRowProps> = ({
-  index,
-  style,
-  message,
-  streamingMessageId,
-  agentAvatar,
-  onRegenerateClick,
-  isLastAssistantMessage,
-  onSelectQuestion,
-  sizeMapRef,
-  listRef,
-}) => {
-  const rowRef = useRef<HTMLDivElement | null>(null);
-
-  useLayoutEffect(() => {
-    const element = rowRef.current;
-    if (!element || !message) return;
-
-    const measure = () => {
-      const rect = element.getBoundingClientRect();
-      if (!rect.height) return;
-
-      const prevSize = sizeMapRef.current[message.messageId];
-      if (prevSize !== rect.height) {
-        sizeMapRef.current[message.messageId] = rect.height;
-        if (listRef.current) {
-          listRef.current.resetAfterIndex(index);
-        }
-      }
-    };
-
-    measure();
-
-    const resizeObserver = new ResizeObserver(() => {
-      measure();
-    });
-
-    resizeObserver.observe(element);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [index, message?.messageId, sizeMapRef, listRef]);
-
-  if (!message) return null;
-
-  return (
-    <div style={style}>
-      <div ref={rowRef} className="px-4">
-        <MessageItem
-          key={message.messageId}
-          message={message}
-          isStreaming={message.messageId === streamingMessageId}
-          agentAvatar={agentAvatar}
-          onRegenerate={onRegenerateClick}
-          isLastAssistantMessage={isLastAssistantMessage}
-          onSelectQuestion={onSelectQuestion}
-        />
-      </div>
-    </div>
-  );
-};
 
 const MessageList: React.FC<MessageListProps> = ({
   messages,
@@ -121,12 +30,9 @@ const MessageList: React.FC<MessageListProps> = ({
   onRegenerate,
   onSelectQuestion,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<List>(null);
-  const outerRef = useRef<HTMLDivElement | null>(null);
-  const [listHeight, setListHeight] = useState<number>(0);
-  const sizeMapRef = useRef<Record<string, number>>({});
+  const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef<boolean>(true);
+  const lastMessageIdRef = useRef<string | null>(null);
 
   // 计算当前会话中最后一条助手消息的下标
   const lastAssistantIndex = React.useMemo(() => {
@@ -138,116 +44,90 @@ const MessageList: React.FC<MessageListProps> = ({
     return -1;
   }, [messages]);
 
-  const updateContainerHeight = () => {
-    const el = containerRef.current?.parentElement;
-    if (!el) return;
-    const height = Math.max(0, el.clientHeight - BOTTOM_GAP);
-    setListHeight(height);
-  };
-
-  useLayoutEffect(() => {
-    updateContainerHeight();
-    const parent = containerRef.current?.parentElement;
-    if (!parent) return;
-
-    const ro = new ResizeObserver(() => updateContainerHeight());
-    ro.observe(parent);
-    return () => ro.disconnect();
-  }, []);
-
-  /**
-   * 查找上一条用户消息
-   */
-  const findPreviousUserMessage = (currentIndex: number): ChatMessage | null => {
+  const findPreviousUserMessage = useCallback((currentIndex: number): ChatMessage | null => {
     for (let i = currentIndex - 1; i >= 0; i--) {
       if (messages[i].role.type === RoleType.USER) {
         return messages[i];
       }
     }
     return null;
-  };
+  }, [messages]);
 
-  /**
-   * 处理重新生成
-   */
-  const handleRegenerate = async (messageId: string, currentIndex: number) => {
-    if (!onRegenerate) return;
-    
-    const previousUserMessage = findPreviousUserMessage(currentIndex);
-    if (!previousUserMessage) {
-      return;
-    }
+  const handleRegenerate = useCallback(
+    async (messageId: string, currentIndex: number) => {
+      if (!onRegenerate) return;
+      const previousUserMessage = findPreviousUserMessage(currentIndex);
+      if (!previousUserMessage) return;
+      await onRegenerate(messageId, previousUserMessage);
+    },
+    [onRegenerate, findPreviousUserMessage]
+  );
 
-    await onRegenerate(messageId, previousUserMessage);
-  };
-
-  const getItemSize = (index: number) => {
-    const message = messages[index];
-    if (!message) return ESTIMATED_ITEM_SIZE + ITEM_GAP;
-    return (sizeMapRef.current[message.messageId] || ESTIMATED_ITEM_SIZE) + ITEM_GAP;
-  };
-
-  const handleScroll = (props: ListOnScrollProps) => {
-    const { scrollUpdateWasRequested } = props;
-    if (!outerRef.current || !listHeight) return;
-
-    const outer = outerRef.current;
-    const scrollHeight = outer.scrollHeight;
-    const distanceToBottom = scrollHeight - (outer.scrollTop + outer.clientHeight);
-
-    if (!scrollUpdateWasRequested) {
-      isAtBottomRef.current = distanceToBottom <= FOLLOW_BOTTOM_THRESHOLD;
-    }
-  };
-
-  useEffect(() => {
-    if (!listRef.current || !messages.length || !listHeight) return;
-
-    if (isAtBottomRef.current) {
-      listRef.current.scrollToItem(messages.length - 1, 'end');
-    }
-  }, [messages, listHeight]);
-
-  useEffect(() => {
-    sizeMapRef.current = {};
-    if (listRef.current) {
-      listRef.current.resetAfterIndex(0, true);
-    }
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceToBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
+    isAtBottomRef.current = distanceToBottom <= FOLLOW_BOTTOM_THRESHOLD;
   }, []);
 
-  const scrollAreaHeight = listHeight - CONTAINER_PADDING_VERTICAL_PX * 2;
+  // 新消息出现且当前在底部时，滚到底部
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !messages.length) return;
+
+    const lastMessage = messages[messages.length - 1];
+    const lastId = lastMessage?.messageId ?? null;
+    const prevLastId = lastMessageIdRef.current;
+    lastMessageIdRef.current = lastId;
+
+    if (!isAtBottomRef.current) return;
+    if (prevLastId !== null && prevLastId === lastId) return;
+
+    requestAnimationFrame(() => {
+      if (!scrollRef.current) return;
+      const { scrollHeight, clientHeight } = scrollRef.current;
+      scrollRef.current.scrollTop = Math.max(0, scrollHeight - clientHeight);
+    });
+  }, [messages.length, messages[messages.length - 1]?.messageId]);
+
+  // 流式输出时若在底部，随内容增长保持贴底（用 RAF 避免过于频繁）
+  useEffect(() => {
+    if (!messages.length || !scrollRef.current) return;
+    const last = messages[messages.length - 1];
+    if (last?.messageId !== streamingMessageId) return;
+    if (!isAtBottomRef.current) return;
+
+    const raf = requestAnimationFrame(() => {
+      if (!scrollRef.current) return;
+      const { scrollHeight, clientHeight } = scrollRef.current;
+      scrollRef.current.scrollTop = Math.max(0, scrollHeight - clientHeight);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [messages, streamingMessageId]);
 
   return (
-    <div className="w-full flex justify-center h-full" ref={containerRef}>
-      <div className="w-full max-w-[960px] h-full py-[24px]">
-        {listHeight > CONTAINER_PADDING_VERTICAL_PX * 2 && (
-          <List
-            ref={listRef}
-            outerRef={outerRef}
-            outerElementType={ScrollOuter}
-            height={scrollAreaHeight}
-            itemCount={messages.length}
-            itemSize={getItemSize}
-            width="100%"
-            overscanCount={8}
-            onScroll={handleScroll}
-          >
-            {({ index, style }: { index: number; style: React.CSSProperties }) => (
-              <MessageRow
-                index={index}
-                style={style}
-                message={messages[index]}
-                streamingMessageId={streamingMessageId}
-                agentAvatar={agentAvatar}
-                onRegenerateClick={onRegenerate ? (messageId) => handleRegenerate(messageId, index) : undefined}
-                 isLastAssistantMessage={index === lastAssistantIndex}
-                 onSelectQuestion={onSelectQuestion}
-                sizeMapRef={sizeMapRef}
-                listRef={listRef}
-              />
-            )}
-          </List>
-        )}
+    <div className="w-full flex flex-col items-center justify-center h-full min-h-0">
+      <div
+        ref={scrollRef}
+        className="w-full max-w-[960px] flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-6"
+        style={{ marginBottom: BOTTOM_GAP }}
+        onScroll={handleScroll}
+      >
+        <div className="flex flex-col gap-6 flex-shrink-0">
+          {messages.map((message, index) => (
+            <MessageItem
+              key={message.messageId}
+              message={message}
+              isStreaming={message.messageId === streamingMessageId}
+              agentAvatar={agentAvatar}
+              onRegenerate={
+                onRegenerate ? (id) => handleRegenerate(id, index) : undefined
+              }
+              isLastAssistantMessage={index === lastAssistantIndex}
+              onSelectQuestion={onSelectQuestion}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

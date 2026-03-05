@@ -358,6 +358,11 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
       // 使用 executeDataAgentWithTokenRefresh 包装 API 调用
       const response = await this.executeDataAgentWithTokenRefresh(async () => {
+        // 为当前流式请求创建 AbortController，便于前端在停止会话时主动中断连接
+        const controller = new AbortController();
+        // ChatKitBase 中定义了 currentStreamController，向下转型后直接赋值
+        (this as any).currentStreamController = controller;
+
         const res = await fetch(
           `${this.dipBaseUrl}/app/${this.dipKey}/chat/completion`,
           {
@@ -368,6 +373,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
               Authorization: `Bearer ${this.dipToken}`,
               'x-business-domain': this.dipBusinessDomain,
             },
+            signal: controller.signal,
             body: JSON.stringify(body),
           }
         );
@@ -2070,6 +2076,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
           Authorization: this.dipToken.startsWith('Bearer ') ? this.dipToken : `Bearer ${this.dipToken}`,
+          'x-business-domain': this.dipBusinessDomain,
         };
 
         const body = JSON.stringify({
@@ -2408,6 +2415,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${this.dipToken}`,
+              'x-business-domain': this.dipBusinessDomain,
             },
           });
 
@@ -2462,6 +2470,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${this.dipToken}`,
+              'x-business-domain': this.dipBusinessDomain,
             },
           });
 
@@ -2512,6 +2521,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${this.dipToken}`,
+              'x-business-domain': this.dipBusinessDomain,
             },
           });
 

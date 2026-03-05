@@ -95,8 +95,24 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
   /**
    * 处理新建对话
    */
-  handleNewChat = () => {
-    this.createConversation();
+  handleNewChat = async () => {
+    // 如果当前有进行中的流式响应，仅中断前端流式连接，不调用 terminateConversation，避免影响历史会话完整性
+    if (this.currentStreamController) {
+      try {
+        this.currentStreamController.abort();
+      } catch {
+      } finally {
+        this.currentStreamController = undefined;
+      }
+    }
+    // 重置当前流式状态
+    this.setState({
+      streamingMessageId: null,
+      isSending: false,
+    } as AssistantBaseState);
+
+    // 然后再创建一个全新的会话；新会话默认处于空闲状态
+    await this.createConversation();
   };
 
   /**
@@ -104,6 +120,22 @@ export abstract class AssistantBase<P extends AssistantBaseProps = AssistantBase
    */
   handleLoadConversation = async (conversationId: string) => {
     try {
+      // 切换历史会话前，如果当前有进行中的流式响应，仅中断前端流式连接，不调用 terminateConversation
+      if (this.currentStreamController) {
+        try {
+          this.currentStreamController.abort();
+        } catch {
+        } finally {
+          this.currentStreamController = undefined;
+        }
+      }
+      // 重置当前流式状态，避免旧会话“进行中”的视觉残留
+      this.setState((prevState) => ({
+        ...prevState,
+        streamingMessageId: null,
+        isSending: false,
+      } as AssistantBaseState));
+
       await this.loadConversation(conversationId);
       this.setState((prevState) => ({ ...prevState, showHistory: false } as AssistantBaseState)); // 加载成功后关闭历史对话列表
     } catch (error) {
