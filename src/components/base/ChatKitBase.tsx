@@ -26,6 +26,14 @@ export interface ChatKitBaseProps {
 
   /** 刷新 token 的方法，由集成方传入 */
   refreshToken?: () => Promise<string>;
+
+  /**
+   * 初始用户问题。
+   *
+   * - 外层在挂载 Assistant / Copilot 等组件时传入
+   * - 当组件首次可见且当前没有任何消息时，会自动发送该问题并触发问答
+   */
+  initialQuestion?: string;
 }
 
 /**
@@ -75,6 +83,23 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
   private hasInitialized = false;
 
   /**
+   * 会话代数：用于区分「旧会话的流式更新」和「新会话」
+   * 每次清空/新建会话时自增，流式处理只在代数未变化时才继续写入 state
+   */
+  private conversationSeq = 0;
+
+  /**
+   * 当前流式请求的 AbortController
+   * 子类在发起流式 fetch 时应设置该字段，便于在 handleStop / 新建会话时主动中断连接
+   */
+  protected currentStreamController?: AbortController;
+
+  /**
+   * 是否已经根据 initialQuestion 触发过一次自动发送
+   */
+  private hasSentInitialQuestion = false;
+
+  /**
    * 流式响应时是否处于「按 chunk 批处理」中，避免同一 chunk 内多行事件触发多次 setState 导致 Maximum update depth exceeded
    */
   private _streamingBatch = false;
@@ -118,6 +143,9 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     if (this.props.visible && !this.hasInitialized && !this.isInitializing) {
       await this.initializeConversation();
     }
+
+    // 初始化完成后，如果外层传入了 initialQuestion，则尝试自动发送一次
+    await this.trySendInitialQuestion();
   }
 
   /**
@@ -128,6 +156,15 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     // 当 visible 从 false 变为 true，且还未初始化时，初始化会话
     if (!prevProps.visible && this.props.visible && !this.hasInitialized && !this.isInitializing) {
       await this.initializeConversation();
+    }
+
+    // 当组件从不可见变为可见，或 initialQuestion 发生变化时，尝试触发一次自动发送
+    const wasVisible = prevProps.visible !== false;
+    const isVisible = this.props.visible !== false;
+    const initialQuestionChanged = prevProps.initialQuestion !== this.props.initialQuestion;
+
+    if (isVisible && (!wasVisible || initialQuestionChanged)) {
+      await this.trySendInitialQuestion(prevProps);
     }
   }
 
@@ -161,6 +198,54 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
       this.isInitializing = false;
       // 加载完成，无论成功或失败都取消加载状态
       this.setState({ isLoadingOnboarding: false });
+    }
+  }
+
+  /**
+   * 根据 props.initialQuestion 在合适的时机自动触发一次问答
+   *
+   * 触发条件：
+   * - 组件当前处于可见状态（visible !== false）
+   * - props.initialQuestion 为非空字符串
+   * - 当前还没有任何对话消息（messages.length === 0）
+   * - 仅触发一次（hasSentInitialQuestion 为 false）
+   */
+  private async trySendInitialQuestion(prevProps?: P): Promise<void> {
+    const isVisible = this.props.visible !== false;
+    if (!isVisible) {
+      return;
+    }
+
+    const { initialQuestion } = this.props;
+    if (!initialQuestion || !initialQuestion.trim()) {
+      return;
+    }
+
+    // 如果 initialQuestion 没有变化且已经处理过，则不重复发送
+    if (
+      this.hasSentInitialQuestion &&
+      (!prevProps || prevProps.initialQuestion === initialQuestion)
+    ) {
+      return;
+    }
+
+    // 只在还没有任何消息且当前没有发送中的请求时自动触发，避免干扰已有会话
+    if (this.state.messages.length > 0 || this.state.isSending) {
+      this.hasSentInitialQuestion = true;
+      return;
+    }
+
+    this.hasSentInitialQuestion = true;
+
+    const context =
+      this.state.applicationContext ||
+      this.props.defaultApplicationContext ||
+      { title: '', data: {} };
+
+    try {
+      await this.send(initialQuestion, context);
+    } catch {
+      // 自动发送失败时静默处理，交由用户手动输入重试
     }
   }
 
@@ -786,9 +871,17 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
    * 清除会话中的对话消息及会话 ID
    */
   private clearConversation = (): void => {
+    // 每次清空会话时自增会话代数，阻止旧流式请求继续写入
+    this.conversationSeq += 1;
+
     this.setState({
       conversationID: '',
       messages: [],
+      textInput: '',
+      applicationContext: this.props.defaultApplicationContext,
+      isSending: false,
+      streamingMessageId: null,
+      onboardingInfo: undefined,
     });
   };
 
@@ -888,6 +981,9 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     reader: ReadableStreamDefaultReader<Uint8Array>,
     assistantMessageId: string
   ): Promise<T> {
+    // 记录当前会话代数；如果期间被新建会话清空，则停止处理本次流
+    const startSeq = this.conversationSeq;
+
     const decoder = new TextDecoder();
     let assistantMessage: T = {} as T;
 
@@ -896,6 +992,11 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
       let buffer = ''; // 用于缓存不完整的行
 
       while (true) {
+        // 如果会话代数已经变化，说明用户已新建会话，直接停止旧流处理
+        if (this.conversationSeq !== startSeq) {
+          break;
+        }
+
         const { done, value } = await reader.read();
         if (done) {
           break;
@@ -1057,6 +1158,16 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     try {
       // 调用子类实现的 terminateConversation 方法
       await this.terminateConversation(conversationID);
+
+      // 主动中断前端当前流式连接，避免继续从接口读取数据
+      if (this.currentStreamController) {
+        try {
+          this.currentStreamController.abort();
+        } catch {
+        } finally {
+          this.currentStreamController = undefined;
+        }
+      }
 
       // 清除流式消息 ID，恢复为正常状态
       this.setState({
