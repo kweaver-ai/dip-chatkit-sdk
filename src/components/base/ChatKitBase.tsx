@@ -556,7 +556,7 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
     * @param chartData 图表数据 Schema
     * @param consumeTime 耗时（毫秒），可选
     */
-   protected appendJson2PlotBlock(messageId: string, chartData: ChartDataSchema, consumeTime?: number): void {
+  protected appendJson2PlotBlock(messageId: string, chartData: ChartDataSchema, consumeTime?: number): void {
     this.applyStreamingUpdate((prevState) => {
       const newMessages = prevState.messages.map((msg) => {
         if (msg.messageId === messageId) {
@@ -573,6 +573,53 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
           return { ...msg, content: newContent };
         }
         return msg;
+      });
+
+      return { messages: newMessages };
+    });
+  }
+
+  /**
+   * 更新指定消息中最后一个 JSON2Plot 图表块的内容（用于流式工具 json2plot 的组装）
+   * 如果不存在 JSON2Plot 块，则在流式更新时创建一个新的图表块
+   * @param messageId 消息 ID
+   * @param chartData 最新的图表数据 Schema
+   * @param consumeTime 耗时（毫秒），可选
+   */
+  protected updateJson2PlotBlock(messageId: string, chartData: ChartDataSchema, consumeTime?: number): void {
+    this.applyStreamingUpdate((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId !== messageId) return msg;
+        const content = msg.content;
+        let lastIndex = -1;
+        for (let i = content.length - 1; i >= 0; i--) {
+          if (content[i].type === BlockType.JSON2PLOT) {
+            lastIndex = i;
+            break;
+          }
+        }
+
+        const newContent = [...content];
+
+        if (lastIndex < 0) {
+          // 如果还没有 JSON2Plot 块，则创建一个新的
+          newContent.push({
+            type: BlockType.JSON2PLOT,
+            content: chartData,
+            consumeTime,
+          } as Json2PlotBlock);
+          return { ...msg, content: newContent };
+        }
+
+        // 已存在 JSON2Plot 块，则使用最新数据更新之
+        const block = newContent[lastIndex] as Json2PlotBlock;
+        newContent[lastIndex] = {
+          ...block,
+          content: chartData,
+          consumeTime: consumeTime ?? block.consumeTime,
+        };
+
+        return { ...msg, content: newContent };
       });
 
       return { messages: newMessages };
@@ -656,6 +703,73 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
   }
 
   /**
+   * 更新指定消息中最后一个 DatasourceFilter 工具块的内容（用于流式工具 datasource_filter 的组装）
+   * 如果不存在 DatasourceFilter 块，则在流式更新时创建一个新的工具块
+   * @param messageId 消息 ID
+   * @param result 最新的 DatasourceFilterResult
+   * @param consumeTime 耗时（毫秒），可选
+   */
+  protected updateDatasourceFilterBlock(messageId: string, result: DatasourceFilterResult, consumeTime?: number): void {
+    this.applyStreamingUpdate((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId !== messageId) return msg;
+
+        const content = msg.content;
+        let lastIndex = -1;
+        for (let i = content.length - 1; i >= 0; i--) {
+          const block = content[i] as ToolBlock;
+          if (
+            block.type === BlockType.TOOL &&
+            (block as ToolBlock).content &&
+            (block as ToolBlock).content.name === 'datasource_filter'
+          ) {
+            lastIndex = i;
+            break;
+          }
+        }
+
+        const newContent = [...content];
+
+        if (lastIndex < 0) {
+          // 如果还没有 DatasourceFilter 块，则创建一个新的
+          newContent.push({
+            type: BlockType.TOOL,
+            content: {
+              name: 'datasource_filter',
+              title: `匹配到${result?.result?.length || 0}个数据`,
+              icon: <AfSailorIcon />,
+              input: [],
+              output: {
+                data: result.result,
+              },
+            },
+            consumeTime,
+          } as ToolBlock);
+          return { ...msg, content: newContent };
+        }
+
+        // 已存在 DatasourceFilter 块，则使用最新数据更新之
+        const block = newContent[lastIndex] as ToolBlock;
+        newContent[lastIndex] = {
+          ...block,
+          content: {
+            ...(block.content as any),
+            title: `匹配到${result?.result?.length || 0}个数据`,
+            output: {
+              data: result.result,
+            },
+          },
+          consumeTime: consumeTime ?? (block as any).consumeTime,
+        } as ToolBlock;
+
+        return { ...msg, content: newContent };
+      });
+
+      return { messages: newMessages };
+    });
+  }
+
+  /**
    * 添加 DatasourceRerank 工具类型的消息块
    * 该方法由子类调用，用于在消息中添加 DatasourceRerank 查询结果，与 datasource_filter 处理方式一致
    * @param messageId 消息 ID
@@ -687,6 +801,73 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
           return { ...msg, content: newContent };
         }
         return msg;
+      });
+
+      return { messages: newMessages };
+    });
+  }
+
+  /**
+   * 更新指定消息中最后一个 DatasourceRerank 工具块的内容（用于流式工具 datasource_rerank 的组装）
+   * 如果不存在 DatasourceRerank 块，则在流式更新时创建一个新的工具块
+   * @param messageId 消息 ID
+   * @param result 最新的 DatasourceRerankResult
+   * @param consumeTime 耗时（毫秒），可选
+   */
+  protected updateDatasourceRerankBlock(messageId: string, result: DatasourceRerankResult, consumeTime?: number): void {
+    this.applyStreamingUpdate((prevState) => {
+      const newMessages = prevState.messages.map((msg) => {
+        if (msg.messageId !== messageId) return msg;
+
+        const content = msg.content;
+        let lastIndex = -1;
+        for (let i = content.length - 1; i >= 0; i--) {
+          const block = content[i] as ToolBlock;
+          if (
+            block.type === BlockType.TOOL &&
+            (block as ToolBlock).content &&
+            (block as ToolBlock).content.name === 'datasource_rerank'
+          ) {
+            lastIndex = i;
+            break;
+          }
+        }
+
+        const newContent = [...content];
+
+        if (lastIndex < 0) {
+          // 如果还没有 DatasourceRerank 块，则创建一个新的
+          newContent.push({
+            type: BlockType.TOOL,
+            content: {
+              name: 'datasource_rerank',
+              title: `重排匹配到${result?.result?.length || 0}个数据`,
+              icon: <AfSailorIcon />,
+              input: [],
+              output: {
+                data: result.result,
+              },
+            },
+            consumeTime,
+          } as ToolBlock);
+          return { ...msg, content: newContent };
+        }
+
+        // 已存在 DatasourceRerank 块，则使用最新数据更新之
+        const block = newContent[lastIndex] as ToolBlock;
+        newContent[lastIndex] = {
+          ...block,
+          content: {
+            ...(block.content as any),
+            title: `重排匹配到${result?.result?.length || 0}个数据`,
+            output: {
+              data: result.result,
+            },
+          },
+          consumeTime: consumeTime ?? (block as any).consumeTime,
+        } as ToolBlock;
+
+        return { ...msg, content: newContent };
       });
 
       return { messages: newMessages };
@@ -801,8 +982,23 @@ export abstract class ChatKitBase<P extends ChatKitBaseProps = ChatKitBaseProps>
             break;
           }
         }
-        if (lastToolIndex < 0) return msg;
         const newContent = [...content];
+
+        if (lastToolIndex < 0) {
+          // 若尚未存在对应工具块，则在流式更新时创建一个默认工具块
+          newContent.push({
+            type: BlockType.TOOL,
+            content: {
+              name: toolName,
+              icon: <Text2SqlIcon />,
+              title: result.title,
+              input: result.input,
+              output: result.output,
+            },
+          } as ToolBlock);
+          return { ...msg, content: newContent };
+        }
+
         const block = newContent[lastToolIndex] as ToolBlock;
         newContent[lastToolIndex] = {
           ...block,

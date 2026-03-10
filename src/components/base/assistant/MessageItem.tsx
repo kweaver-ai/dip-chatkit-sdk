@@ -93,30 +93,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
     block: { type: string; content: unknown },
     relatedQuestions: string[] | undefined
   ): boolean => {
-    // 仅 TEXT / MARKDOWN 类型才可能是相关问题块
-    if (
-      block.type !== BlockType.TEXT &&
-      block.type !== BlockType.MARKDOWN
-    ) {
-      return false
-    }
-
+    if (!relatedQuestions?.length) return false
+    if (block.type !== BlockType.TEXT && block.type !== BlockType.MARKDOWN) return false
     const s = typeof block.content === 'string' ? block.content.trim() : ''
     if (!s) return false
-
     try {
       const arr = JSON.parse(s) as unknown
-      if (!Array.isArray(arr)) return false
-
-      // 场景 1：后端给了一个 "[]" 的 JSON 字符串，但前端没有 relatedQuestions，
-      // 这时我们认为它是「空的相关问题占位」，不需要渲染出来。
-      if (!relatedQuestions?.length) {
-        return arr.length === 0
-      }
-
-      // 场景 2：后端把 related_queries 以 JSON 数组字符串的形式放在 content 里，
-      // 并且我们已经通过 messageContext.relatedQuestions 展示了，这里就不再渲染。
-      if (arr.length !== relatedQuestions.length) return false
+      if (!Array.isArray(arr) || arr.length !== relatedQuestions.length) return false
       return arr.every((x, i) => x === relatedQuestions[i])
     } catch {
       return false
@@ -149,6 +132,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
               case BlockType.WEB_SEARCH:
                 return <WebSearchBlock key={index} block={block} />
               case BlockType.JSON2PLOT:
+                console.log(block)
                 return <Json2PlotBlock key={index} block={block} />
               case BlockType.TOOL:
                 return <ToolBlock key={index} block={block} />
@@ -252,12 +236,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
         {/* 相关问题（仅最后一条助手消息、非流式中且有待展示时） */}
         {!isUser && isLastAssistantMessage && !isStreaming && (
-          <RelatedQuestions
-            questions={message.messageContext?.relatedQuestions ?? []}
-            onSelectQuestion={onSelectQuestion}
-            className="mt-2"
-          />
-        )}
+            <RelatedQuestions
+              questions={message.messageContext?.relatedQuestions ?? []}
+              onSelectQuestion={onSelectQuestion}
+              className="mt-2"
+            />
+          )}
       </div>
       
      

@@ -172,7 +172,6 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       this.dipBusinessDomain = props.businessDomain || 'bd_public';
       this.dipToken = props.token || '';
       this.dipRefreshToken = props.refreshToken;
-      console.log(  this.dipBusinessDomain ,'  this.dipBusinessDomain')
 
       // 向后兼容：如果传入了 bearerToken 但没有 token，从 bearerToken 中提取 token
       if (props.bearerToken && !props.token) {
@@ -432,7 +431,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       // 记录流式开始时间，用于计算本次回答耗时
       const startTime = Date.now();
 
-      // 处理流式响应
+      // 处理流式响应（在流式过程中按白名单增量更新消息与内容块）
       await (this as any).handleStreamResponse(reader, assistantMessageId);
 
       // 从 state 中获取最终更新后的消息
@@ -568,6 +567,8 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       // 执行后处理，使用更新后的 messageId（优先使用 AssistantMessage.message.id）
       // 这样可以确保 append*Block 方法能找到正确的消息
       if (whitelistEntry.postProcess) {
+        // 注意：postProcess 现在仅用于写入 messageContext（相关问题、耗时、Token 等）
+        // 工具和 LLM 内容块的渲染统一在流式结束后基于完整 AssistantMessage 处理
         whitelistEntry.postProcess(assistantMessage, em.content, currentMessageId);
       }
 
@@ -712,37 +713,62 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         postProcess: (_assistantMessage, content, messageId) => {
           // content 是一个 Progress 对象
           if (content?.stage === 'skill') {
-            if(content.skill_info?.args?.some((item: any) => item?.name === 'action' && item?.value === 'show_ds')){
+            // 某些内部技能（如 show_ds）不展示
+            if (content.skill_info?.args?.some((item: any) => item?.name === 'action' && item?.value === 'show_ds')) {
               return;
             }
-            // 检查是否是 Web 搜索工具
+
+            // Web 搜索工具：流式期间追加 WebSearchBlock
             if (content.skill_info?.name === 'zhipu_search_tool') {
-              // 构造 WebSearchQuery 并调用渲染方法
               const searchQuery = this.extractWebSearchQuery(content);
               if (searchQuery) {
                 (this as any).appendWebSearchBlock(messageId, searchQuery);
               }
             }
-            // 检查是否是 Json2Plot 工具
-            if (content?.skill_info?.name === 'json2plot') {
-              const chartData = this.extractJson2PlotData(content);
+
+            // Json2Plot 工具：首帧或中间帧根据当前 answer 解析图表并渲染
+            if (content.skill_info?.name === 'json2plot') {
+              const chartData = this.extractChartDataFromArgs(content.skill_info?.args, content.answer);
               if (chartData) {
                 const consumeTime = this.calculateConsumeTime(content.start_time, content.end_time);
                 (this as any).appendJson2PlotBlock(messageId, chartData, consumeTime);
               }
             }
-            // 检查是否是 search_memory, _date, build_memory 技能
+
+            // DatasourceFilter 工具：首帧或中间帧根据当前 answer 解析并渲染
+            if (content.skill_info?.name === 'datasource_filter') {
+              const datasourceFilterResult = this.extractDatasourceFilterResult(content.skill_info?.args, content.answer);
+              if (datasourceFilterResult) {
+                const consumeTime = this.calculateConsumeTime(content.start_time, content.end_time);
+                (this as any).appendDatasourceFilterBlock(messageId, datasourceFilterResult, consumeTime);
+              }
+            }
+
+            // DatasourceRerank 工具：首帧或中间帧根据当前 answer 解析并渲染
+            if (content.skill_info?.name === 'datasource_rerank') {
+              const datasourceRerankResult = this.extractDatasourceRerankResult(content.skill_info?.args, content.answer);
+              if (datasourceRerankResult) {
+                const consumeTime = this.calculateConsumeTime(content.start_time, content.end_time);
+                (this as any).appendDatasourceRerankBlock(messageId, datasourceRerankResult, consumeTime);
+              }
+            }
+
+            // search_memory / _date / build_memory 等工具默认不展示
             const skillNameLower = content.skill_info?.name?.toLowerCase();
-            if (skillNameLower === 'search_memory' || skillNameLower === '_date' || skillNameLower === 'build_memory') {
-              // 这些技能默认不显示调用信息，或者根据需求进行特定处理
-              // 如果需要显示，可以添加相应的渲染逻辑
+            if (
+              skillNameLower === 'search_memory' ||
+              skillNameLower === '_date' ||
+              skillNameLower === 'build_memory'
+            ) {
               return;
             }
           } else if (content?.stage === 'llm') {
-            // LLM 阶段，输出 answer
+            // LLM 阶段，输出 answer（流式 Markdown）
             const answer = content.answer || '';
             (this as any).appendMarkdownBlock(messageId, answer);
           }
+
+          // 兜底：走通用的技能 / LLM 处理逻辑，保证所有白名单内工具都参与流式组装
           this.processMiddleAnswerProgress(content, messageId);
         },
       },
@@ -763,7 +789,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     if (action === 'append' && progressArrayAnswerPattern.test(jsonPath)) {
       return {
         postProcess: (assistantMessage, _content, messageId) => {
-          // 提取最后一个 progress 的 answer
+          // 提取最后一个 progress 的 answer，流式补全 Markdown
           const progress = assistantMessage.message?.content?.middle_answer?.progress || [];
           if (progress.length > 0) {
             const lastProgress = progress[progress.length - 1];
@@ -784,7 +810,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         postProcess: (assistantMessage, _content, messageId) => {
           const progress = assistantMessage.message?.content?.middle_answer?.progress || [];
           const item = progress[progressIndex];
-          if (item?.stage === 'skill' && item?.skill_info?.name === 'contextloader_data_enhanced') {
+          if (item?.stage === 'skill' && item?.skill_info) {
             const defaultTool = this.buildDefaultToolResult(item.skill_info, item.answer);
             if (defaultTool) {
               (this as any).updateDefaultToolBlockResult(messageId, defaultTool.toolName, defaultTool.result);
@@ -794,7 +820,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       };
     }
 
-    // 流式工具整块 upsert progress[N].answer 时，用最新 answer 更新工具块（如 seq 417 一次性写入整块）
+    // 流式工具整块 upsert progress[N].answer 时，用最新 answer 更新工具块
     const progressAnswerUpsertMatch = action === 'upsert' && jsonPath.match(progressAnswerUpsertPattern);
     if (progressAnswerUpsertMatch) {
       const progressIndex = parseInt(progressAnswerUpsertMatch[1], 10);
@@ -802,7 +828,40 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
         postProcess: (assistantMessage, _content, messageId) => {
           const progress = assistantMessage.message?.content?.middle_answer?.progress || [];
           const item = progress[progressIndex];
-          if (item?.stage === 'skill' && item?.skill_info?.name === 'contextloader_data_enhanced' && item.answer != null) {
+          if (item?.stage === 'skill' && item?.skill_info && item.answer != null) {
+            const skillName = item.skill_info.name;
+
+            // 专门处理 json2plot 工具：用最新的 answer 解析图表数据并更新 JSON2Plot 块
+            if (skillName === 'json2plot') {
+              const chartData = this.extractChartDataFromArgs(item.skill_info?.args, item.answer);
+              if (chartData) {
+                const consumeTime = this.calculateConsumeTime(item.start_time, item.end_time);
+                (this as any).updateJson2PlotBlock(messageId, chartData, consumeTime);
+              }
+              return;
+            }
+
+            // 专门处理 datasource_filter 工具：用最新的 answer 解析并更新 DatasourceFilter 块
+            if (skillName === 'datasource_filter') {
+              const datasourceFilterResult = this.extractDatasourceFilterResult(item.skill_info?.args, item.answer);
+              if (datasourceFilterResult) {
+                const consumeTime = this.calculateConsumeTime(item.start_time, item.end_time);
+                (this as any).updateDatasourceFilterBlock(messageId, datasourceFilterResult, consumeTime);
+              }
+              return;
+            }
+
+            // 专门处理 datasource_rerank 工具：用最新的 answer 解析并更新 DatasourceRerank 块
+            if (skillName === 'datasource_rerank') {
+              const datasourceRerankResult = this.extractDatasourceRerankResult(item.skill_info?.args, item.answer);
+              if (datasourceRerankResult) {
+                const consumeTime = this.calculateConsumeTime(item.start_time, item.end_time);
+                (this as any).updateDatasourceRerankBlock(messageId, datasourceRerankResult, consumeTime);
+              }
+              return;
+            }
+
+            // 其他走默认工具块的技能：统一用 DefaultToolResult 更新/创建工具块
             const defaultTool = this.buildDefaultToolResult(item.skill_info, item.answer);
             if (defaultTool) {
               (this as any).updateDefaultToolBlockResult(messageId, defaultTool.toolName, defaultTool.result);
@@ -816,6 +875,72 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
 
     const key = `${action}:${jsonPath}`;
     return entries[key] || null;
+  }
+
+  /**
+   * 在流式结束后，将完整的 AssistantMessage 结构一次性应用到指定 ChatMessage：
+   * - 遍历 middle_answer.progress，按顺序调用 appendSkillOrLLMContentToMessage 组装所有工具和 LLM 内容块
+   * - 基于 message.ext 同步 messageContext（相关问题、耗时、Token 等），与历史会话逻辑保持一致
+   *
+   * 作为受保护方法暴露，便于子类在特殊场景下自定义流式结果的应用逻辑。
+   */
+  applyAssistantMessageFromStream(assistantMessage: AssistantMessage, messageId: string): void {
+    if (!assistantMessage || !assistantMessage.message) return;
+
+    const contentObj: any = assistantMessage.message.content || {};
+    const middleAnswer = contentObj.middle_answer;
+    const ext: any = (assistantMessage as any).message?.ext;
+
+    // 统一通过 applyStreamingUpdate 更新指定消息，避免与其他流式更新冲突
+    (this as any).applyStreamingUpdate((prevState: any) => {
+      const newMessages = prevState.messages.map((msg: ChatMessage) => {
+        if (msg.messageId !== messageId) return msg;
+
+        // 从现有消息复制基础信息，但重建 content
+        const nextMsg: ChatMessage = {
+          ...msg,
+          content: [],
+        };
+
+        // 1. 按顺序处理 middle_answer.progress 数组，组装所有工具和 LLM 内容块
+        if (middleAnswer?.progress && Array.isArray(middleAnswer.progress)) {
+          for (const progressItem of middleAnswer.progress) {
+            this.appendSkillOrLLMContentToMessage(progressItem as any, nextMsg);
+          }
+        }
+
+        // 2. 基于 message.ext 写入 messageContext（与 getConversationMessages 保持一致）
+        if (ext && typeof ext === 'object') {
+          const relatedQuestions = Array.isArray(ext.related_queries)
+            ? (ext.related_queries as string[]).filter(
+                (q: string) => typeof q === 'string' && q.trim().length > 0
+              )
+            : undefined;
+          const elapsedSeconds =
+            typeof ext.total_time === 'number' && Number.isFinite(ext.total_time)
+              ? ext.total_time
+              : undefined;
+          const totalTokens =
+            typeof ext.total_tokens === 'number' && Number.isFinite(ext.total_tokens)
+              ? ext.total_tokens
+              : ext.token_usage && typeof (ext.token_usage as any).total_tokens === 'number'
+                ? (ext.token_usage as any).total_tokens
+                : undefined;
+
+          if (relatedQuestions?.length || elapsedSeconds != null || totalTokens != null) {
+            nextMsg.messageContext = {
+              ...(relatedQuestions?.length ? { relatedQuestions } : {}),
+              ...(elapsedSeconds != null ? { elapsedSeconds } : {}),
+              ...(totalTokens != null ? { totalTokens } : {}),
+            };
+          }
+        }
+
+        return nextMsg;
+      });
+
+      return { messages: newMessages };
+    });
   }
 
   /**
@@ -1144,6 +1269,7 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
       }
     } else if (skillName === 'datasource_rerank') {
       // DatasourceRerank 工具：解析数据源重排结果，与 datasource_filter 处理方式一致
+      console.log(skillInfo, skillInfo.args, answer, 'datasource_rerank')
       const datasourceRerankResult = this.extractDatasourceRerankResult(skillInfo.args, answer);
       if (datasourceRerankResult) {
         (this as any).appendDatasourceRerankBlock(messageId, datasourceRerankResult, consumeTime);
@@ -1654,23 +1780,30 @@ export function DIPBaseMixin<TBase extends Constructor>(Base: TBase) {
     answer: any
   ): { result: Array<any>; result_cache_key?: string } | null {
     try {
-      const resultData = answer?.result;
+      // 兼容多种后端返回结构：
+      // 1. 与 datasource_filter 一致: answer = { result: { result: [], result_cache_key } }
+      // 2. 扁平结构: answer = { result: [], result_cache_key }
+      // 3. 直接数组: answer = []
+      const resultSource = (answer && answer.result !== undefined) ? answer.result : answer;
 
-      if (!resultData) {
+      if (!resultSource) {
         return null;
       }
 
-      const result = resultData?.result || [];
-      const result_cache_key = resultData?.result_cache_key;
+      const result = Array.isArray((resultSource as any).result)
+        ? (resultSource as any).result
+        : Array.isArray(resultSource)
+          ? (resultSource as any)
+          : [];
+
+      const result_cache_key =
+        (resultSource as any).result_cache_key ?? (answer as any)?.result_cache_key;
 
       if (!Array.isArray(result) || result.length === 0) {
         return null;
       }
 
-      return {
-        result: result,
-        result_cache_key,
-      };
+      return { result, result_cache_key };
     } catch (e) {
       return null;
     }

@@ -13,8 +13,8 @@ interface InputAreaProps {
   /** 输入框值变化的回调 */
   onChange: (value: string) => void;
 
-  /** 发送消息的回调 */
-  onSend: () => void;
+  /** 发送消息的回调（支持异步） */
+  onSend: () => void | Promise<void>;
 
   /** 当前的应用上下文 */
   context?: ApplicationContext;
@@ -46,13 +46,29 @@ const InputArea: React.FC<InputAreaProps> = ({
   isStreaming = false,
   onStop,
 }) => {
+  const [isSending, setIsSending] = React.useState(false);
+
+  /**
+   * 统一处理发送逻辑，避免重复触发
+   */
+  const handleSend = async () => {
+    if (isSending || !value.trim() || disabled) return;
+
+    try {
+      setIsSending(true);
+      await onSend();
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   /**
    * 处理键盘事件
    */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSend();
+      handleSend();
     }
   };
 
@@ -122,12 +138,12 @@ const InputArea: React.FC<InputAreaProps> = ({
         ) : (
           // 发送按钮：正常状态下显示
           <button
-            onClick={onSend}
-            disabled={disabled || !value.trim()}
+            onClick={handleSend}
+            disabled={disabled || isSending || !value.trim()}
             className="absolute bottom-3 right-4 w-8 h-8 flex items-center justify-center bg-[#126EE3] hover:bg-[#126EE3] rounded-md transition-colors disabled:opacity-25 disabled:cursor-not-allowed transition-opacity"
-            title={disabled ? '正在发送...' : '发送消息'}
+            title={disabled || isSending ? '正在发送...' : '发送消息'}
           >
-            <SendIcon disabled={disabled || !value.trim()} />
+            <SendIcon disabled={disabled || isSending || !value.trim()} />
           </button>
         )}
       </div>
