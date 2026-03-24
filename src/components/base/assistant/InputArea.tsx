@@ -150,7 +150,7 @@ const InputArea: React.FC<InputAreaProps> = ({
 
       {/* 底部提示文字 */}
       <p className="mt-2 text-center text-[12px] leading-[18px] text-[rgba(0,0,0,0.55)]" style={{ fontFamily: 'Noto Sans SC' }}>
-        回答的内容由 AI 生成，不能保证完全真实准确，请仔细甄别
+        答案由大模型生成，请仔细甄别
       </p>
       </div>
     </div>
