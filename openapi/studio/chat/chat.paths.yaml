@@ -1,0 +1,100 @@
+paths:
+  /v1/chat/session:
+    post:
+      tags:
+        - studio-chat
+      operationId: createStudioSession
+      summary: Create chat session key
+      description: |
+        Create a Studio chat session key.
+        The returned sessionKey is used by upload and chat APIs.
+      parameters:
+        - $ref: ./chat.schemas.yaml#/components/parameters/authorizationHeader
+        - $ref: ./chat.schemas.yaml#/components/parameters/userIdHeader
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./chat.schemas.yaml#/components/schemas/CreateSessionKeyRequest
+      responses:
+        "200":
+          description: Session key created
+          content:
+            application/json:
+              schema:
+                $ref: ./chat.schemas.yaml#/components/schemas/CreateSessionKeyResponse
+
+  /v1/chat/agent:
+    post:
+      tags:
+        - studio-chat
+      operationId: sendStudioChatMessage
+      summary: Send streaming chat message
+      description: |
+        Send a user message to a Studio agent.
+        Supports attachments and returns SSE events.
+      parameters:
+        - $ref: ./chat.schemas.yaml#/components/parameters/authorizationHeader
+        - $ref: ./chat.schemas.yaml#/components/parameters/sessionKeyHeader
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./chat.schemas.yaml#/components/schemas/ChatAgentRequest
+      responses:
+        "200":
+          description: SSE stream opened
+          content:
+            text/event-stream:
+              schema:
+                $ref: ./chat.schemas.yaml#/components/schemas/OpenResponseStreamEvent
+
+  /v1/chat/upload:
+    post:
+      tags:
+        - studio-chat
+      operationId: uploadStudioChatAttachment
+      summary: Upload chat attachment
+      description: |
+        Upload a chat attachment and return display name and workspace path.
+      parameters:
+        - $ref: ./chat.schemas.yaml#/components/parameters/authorizationHeader
+        - $ref: ./chat.schemas.yaml#/components/parameters/sessionKeyHeader
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: ./chat.schemas.yaml#/components/schemas/ChatUploadRequest
+      responses:
+        "200":
+          description: Upload succeeded
+          content:
+            application/json:
+              schema:
+                $ref: ./chat.schemas.yaml#/components/schemas/ChatUploadResponse
+        "413":
+          description: File too large
+
+  /v1/chat/messages:
+    get:
+      tags:
+        - studio-chat
+      operationId: getStudioChatMessages
+      summary: Get chat messages by session key header
+      description: |
+        Query chat history by x-openclaw-session-key.
+        The response contains normalized message content and attachment parts.
+      parameters:
+        - $ref: ./chat.schemas.yaml#/components/parameters/authorizationHeader
+        - $ref: ./chat.schemas.yaml#/components/parameters/sessionKeyHeader
+        - $ref: ./chat.schemas.yaml#/components/parameters/limitQuery
+      responses:
+        "200":
+          description: Query succeeded
+          content:
+            application/json:
+              schema:
+                $ref: ./chat.schemas.yaml#/components/schemas/ChatMessagesResponse

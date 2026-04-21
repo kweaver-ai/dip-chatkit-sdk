@@ -1,0 +1,73 @@
+paths:
+  /v1/sessions:
+    get:
+      tags:
+        - studio-sessions
+      operationId: getStudioSessions
+      summary: Get session list
+      description: |
+        Get visible Studio session summaries for the current user.
+      parameters:
+        - $ref: ./sessions.schemas.yaml#/components/parameters/authorizationHeader
+        - $ref: ./sessions.schemas.yaml#/components/parameters/limitQuery
+        - $ref: ./sessions.schemas.yaml#/components/parameters/searchQuery
+        - $ref: ./sessions.schemas.yaml#/components/parameters/agentIdQuery
+      responses:
+        "200":
+          description: Query succeeded
+          content:
+            application/json:
+              schema:
+                $ref: ./sessions.schemas.yaml#/components/schemas/SessionsListResponse
+
+  /v1/sessions/{key}:
+    get:
+      tags:
+        - studio-sessions
+      operationId: getStudioSessionSummary
+      summary: Get one session summary
+      description: |
+        Get session summary information by session key.
+      parameters:
+        - $ref: ./sessions.schemas.yaml#/components/parameters/authorizationHeader
+        - $ref: ./sessions.schemas.yaml#/components/parameters/sessionKeyPath
+      responses:
+        "200":
+          description: Query succeeded
+          content:
+            application/json:
+              schema:
+                $ref: ./sessions.schemas.yaml#/components/schemas/SessionSummary
+    delete:
+      tags:
+        - studio-sessions
+      operationId: deleteStudioSession
+      summary: Delete session
+      description: |
+        Delete one Studio session by session key.
+      parameters:
+        - $ref: ./sessions.schemas.yaml#/components/parameters/authorizationHeader
+        - $ref: ./sessions.schemas.yaml#/components/parameters/sessionKeyPath
+      responses:
+        "204":
+          description: Delete succeeded
+
+  /v1/sessions/{key}/messages:
+    get:
+      tags:
+        - studio-sessions
+      operationId: getStudioSessionMessages
+      summary: Get session messages
+      description: |
+        Get full message details for one Studio session.
+      parameters:
+        - $ref: ./sessions.schemas.yaml#/components/parameters/authorizationHeader
+        - $ref: ./sessions.schemas.yaml#/components/parameters/sessionKeyPath
+        - $ref: ./sessions.schemas.yaml#/components/parameters/limitQuery
+      responses:
+        "200":
+          description: Query succeeded
+          content:
+            application/json:
+              schema:
+                $ref: ./sessions.schemas.yaml#/components/schemas/SessionMessagesResponse

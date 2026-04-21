@@ -1,0 +1,189 @@
+components:
+  parameters:
+    authorizationHeader:
+      name: Authorization
+      in: header
+      required: true
+      description: Bearer 访问令牌。
+      schema:
+        type: string
+    sessionKeyPath:
+      name: key
+      in: path
+      required: true
+      description: 会话键 sessionKey。
+      schema:
+        type: string
+    limitQuery:
+      name: limit
+      in: query
+      required: false
+      description: 返回条数上限。
+      schema:
+        type: integer
+        minimum: 0
+    searchQuery:
+      name: search
+      in: query
+      required: false
+      description: 会话搜索关键字。
+      schema:
+        type: string
+    agentIdQuery:
+      name: agentId
+      in: query
+      required: false
+      description: Agent ID 过滤条件。
+      schema:
+        type: string
+
+  schemas:
+    SessionsListResponse:
+      type: object
+      description: 会话列表响应。
+      properties:
+        ts:
+          type: integer
+          format: int64
+          description: 服务端时间戳。
+        path:
+          type: string
+          description: 会话来源路径。
+        count:
+          type: integer
+          description: 会话总数。
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionSummary"
+      required:
+        - count
+        - sessions
+
+    SessionSummary:
+      type: object
+      description: 会话摘要。
+      properties:
+        key:
+          type: string
+          description: 会话键。
+        kind:
+          type: string
+          description: 会话类型。
+        sessionId:
+          type: string
+          description: 会话实例 ID。
+        updatedAt:
+          type: integer
+          format: int64
+          description: 最近更新时间。
+        label:
+          type: string
+          description: 会话标签。
+        displayName:
+          type: string
+          description: 展示名称。
+      required:
+        - key
+        - kind
+        - sessionId
+        - updatedAt
+
+    SessionMessagesResponse:
+      type: object
+      description: 会话消息详情响应。
+      properties:
+        key:
+          type: string
+          description: 会话键。
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionMessage"
+      required:
+        - key
+        - messages
+
+    SessionMessage:
+      type: object
+      description: 会话消息。
+      properties:
+        id:
+          type: string
+          description: 消息 ID。
+        role:
+          type: string
+          enum: [user, assistant]
+          description: 消息角色。
+        content:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                $ref: "#/components/schemas/SessionContentPart"
+          description: 消息内容。若存在附件，首项可能为 input_file 或 input_files。
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+      required:
+        - id
+        - role
+
+    SessionContentPart:
+      oneOf:
+        - $ref: "#/components/schemas/TextContentPart"
+        - $ref: "#/components/schemas/InputFileContentPart"
+        - $ref: "#/components/schemas/InputFilesContentPart"
+
+    TextContentPart:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [text, input_text]
+        text:
+          type: string
+      required:
+        - type
+        - text
+
+    InputFileContentPart:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [input_file]
+        source:
+          $ref: "#/components/schemas/FileSource"
+      required:
+        - type
+        - source
+
+    InputFilesContentPart:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [input_files]
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileSource"
+      required:
+        - type
+        - files
+
+    FileSource:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [path]
+        path:
+          type: string
+      required:
+        - type
+        - path
