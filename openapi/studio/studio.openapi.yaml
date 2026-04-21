@@ -1,0 +1,21 @@
+openapi: 3.0.3
+info:
+  title: KWeaver DIP Studio API
+  version: "1.0.0"
+servers:
+  - url: /api/dip-studio
+paths:
+  /v1/chat/session:
+    $ref: ./chat/chat.paths.yaml#/paths/~1v1~1chat~1session
+  /v1/chat/agent:
+    $ref: ./chat/chat.paths.yaml#/paths/~1v1~1chat~1agent
+  /v1/chat/upload:
+    $ref: ./chat/chat.paths.yaml#/paths/~1v1~1chat~1upload
+  /v1/chat/messages:
+    $ref: ./chat/chat.paths.yaml#/paths/~1v1~1chat~1messages
+  /v1/sessions:
+    $ref: ./sessions/sessions.paths.yaml#/paths/~1v1~1sessions
+  /v1/sessions/{key}:
+    $ref: ./sessions/sessions.paths.yaml#/paths/~1v1~1sessions~1{key}
+  /v1/sessions/{key}/messages:
+    $ref: ./sessions/sessions.paths.yaml#/paths/~1v1~1sessions~1{key}~1messages

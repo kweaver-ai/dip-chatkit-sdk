@@ -2,67 +2,40 @@ import React from 'react';
 import { MarkdownBlock } from './blocks';
 import { BlockType } from '@/types';
 
-/**
- * Prologue 组件的属性接口
- */
 interface PrologueProps {
-  /** 点击推荐问题时的回调函数 */
   onQuestionClick?: (question: string) => void;
-
-  /** 开场白文案 */
   prologue?: string;
-
-  /** 预置问题列表 */
   predefinedQuestions?: string[];
 }
 
-/**
- * Prologue 组件
- * ChatKit 的欢迎界面，显示欢迎语和推荐问题
- */
 const Prologue: React.FC<PrologueProps> = ({
   onQuestionClick,
   prologue,
-  predefinedQuestions
+  predefinedQuestions,
 }) => {
-  // 默认欢迎语
   const defaultPrologue = '你好！我是 Copilot，你的智能浏览助手。我可以帮你理解和分析当前页面的内容。';
-
-  // 默认推荐问题列表
   const defaultQuestions = [
     '🔍 我现在有哪些需要优先处理的高风险工单？',
     '🛠️ 处理 [问题类型] 工单有什么推荐方案？',
     '💡 如何避免处理 [技术领域] 问题的常见错误？',
   ];
 
-  // 使用传入的开场白或默认开场白
   const displayPrologue = prologue || defaultPrologue;
+  const questions =
+    predefinedQuestions && predefinedQuestions.length > 0
+      ? predefinedQuestions
+      : defaultQuestions;
 
-  // 使用传入的预置问题或默认问题
-  const questions = predefinedQuestions && predefinedQuestions.length > 0
-    ? predefinedQuestions
-    : defaultQuestions;
-
-  /**
-   * 处理问题点击
-   */
   const handleQuestionClick = (question: string) => {
-    if (onQuestionClick) {
-      onQuestionClick(question);
-    }
+    onQuestionClick?.(question);
   };
 
   return (
     <div className="flex flex-col gap-[16px] px-[24px] pt-[112px] pb-[16px]">
-      {/* 欢迎语 */}
-      <p
-        className="leading-[17px]"
-        style={{ fontFamily: 'Noto Sans SC' }}
-      >
+      <p className="leading-[17px]" style={{ fontFamily: 'Noto Sans SC' }}>
         <MarkdownBlock block={{ type: BlockType.MARKDOWN, content: displayPrologue }} fontColor="rgba(0,0,0,0.65)" />
       </p>
 
-      {/* 推荐问题列表 */}
       <div className="flex flex-col gap-[12px]">
         {questions.map((question, index) => (
           <button

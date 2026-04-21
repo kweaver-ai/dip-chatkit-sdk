@@ -156,6 +156,16 @@ export abstract class CopilotBase<P extends CopilotBaseProps = CopilotBaseProps>
     const { messages, textInput, applicationContext, isSending, onboardingInfo, isLoadingOnboarding, streamingMessageId } = this.state;
     const showPrologue = messages.length === 0;
     const isStreaming = streamingMessageId !== null;
+    const InputAreaComponent = ((this as any).InputAreaComponent || InputArea) as any;
+    const PrologueComponent = ((this as any).PrologueComponent || Prologue) as any;
+    const inputAreaExtraProps =
+      typeof (this as any).getInputAreaProps === 'function'
+        ? (this as any).getInputAreaProps()
+        : {};
+    const resolvedTitle =
+      typeof (this as any).resolveChatTitle === 'function'
+        ? (this as any).resolveChatTitle(title)
+        : title;
 
     return (
       <DrawerPortalProvider value={drawerContainer ?? null}>
@@ -164,7 +174,7 @@ export abstract class CopilotBase<P extends CopilotBaseProps = CopilotBaseProps>
           <div className="flex flex-col h-full w-full bg-white shadow-2xl">
             {/* 头部 */}
             <Header
-              title={title}
+              title={resolvedTitle}
               onClose={onClose}
               onNewChat={this.createConversation}
               onGetConversations={this.handleGetConversations}
@@ -185,7 +195,7 @@ export abstract class CopilotBase<P extends CopilotBaseProps = CopilotBaseProps>
                   </div>
                 ) : (
                   // 加载完成，显示开场白
-                  <Prologue
+                  <PrologueComponent
                     onQuestionClick={this.handleQuestionClick}
                     prologue={onboardingInfo?.prologue}
                     predefinedQuestions={onboardingInfo?.predefinedQuestions}
@@ -202,7 +212,7 @@ export abstract class CopilotBase<P extends CopilotBaseProps = CopilotBaseProps>
             </div>
 
             {/* 输入区域 */}
-            <InputArea
+            <InputAreaComponent
               value={textInput}
               onChange={this.setTextInput}
               onSend={this.handleSend}
@@ -211,6 +221,7 @@ export abstract class CopilotBase<P extends CopilotBaseProps = CopilotBaseProps>
               disabled={isSending}
               isStreaming={isStreaming}
               onStop={this.handleStop}
+              {...inputAreaExtraProps}
             />
           </div>
 

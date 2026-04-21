@@ -28,6 +28,16 @@ export type { AssistantProps } from './components/dip/Assistant';
 export { default as ChatKitCoze } from './components/coze/Copilot';
 export type { ChatKitCozeProps } from './components/coze/Copilot';
 
+// ============ Studio (kweaver-dip/studio) ============
+export { StudioBaseMixin } from './components/studio/StudioBase';
+export type { StudioBaseProps, StudioChatAttachment } from './components/studio/StudioBase';
+
+export { StudioCopilot } from './components/studio/Copilot';
+export type { StudioCopilotProps } from './components/studio/Copilot';
+
+export { StudioAssistant } from './components/studio/Assistant';
+export type { StudioAssistantProps } from './components/studio/Assistant';
+
 export { RoleType, ChatMessageType } from './types';
 export type {
   Role,

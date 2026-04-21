@@ -1,0 +1,267 @@
+components:
+  parameters:
+    authorizationHeader:
+      name: Authorization
+      in: header
+      required: true
+      description: Bearer 访问令牌。
+      schema:
+        type: string
+    userIdHeader:
+      name: x-user-id
+      in: header
+      required: true
+      description: 当前登录用户 ID，由鉴权链路注入。
+      schema:
+        type: string
+    sessionKeyHeader:
+      name: x-openclaw-session-key
+      in: header
+      required: true
+      description: 通过创建会话接口获取的 sessionKey。
+      schema:
+        type: string
+    limitQuery:
+      name: limit
+      in: query
+      required: false
+      description: 返回消息数量上限。
+      schema:
+        type: integer
+        minimum: 0
+
+  schemas:
+    CreateSessionKeyRequest:
+      type: object
+      description: 创建会话键请求体。
+      properties:
+        agentId:
+          type: string
+          description: 数字员工或 Agent ID。
+      required:
+        - agentId
+
+    CreateSessionKeyResponse:
+      type: object
+      description: 创建会话键响应体。
+      properties:
+        sessionKey:
+          type: string
+          description: 会话键，格式通常为 agent:{agentId}:user:{userId}:direct:{chatId}。
+      required:
+        - sessionKey
+
+    ChatAgentRequest:
+      type: object
+      description: 发起对话请求体。
+      properties:
+        input:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                $ref: "#/components/schemas/MessageInputItem"
+          description: 用户输入，可以是字符串或 OpenResponse 风格消息数组。
+        attachments:
+          type: array
+          description: 附件数组。若包含文件，需先调用上传接口获取 path。
+          items:
+            $ref: "#/components/schemas/ChatAttachment"
+      required:
+        - input
+
+    MessageInputItem:
+      type: object
+      description: OpenResponse 风格消息输入项。
+      properties:
+        type:
+          type: string
+          enum: [message]
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                $ref: "#/components/schemas/TextContentPart"
+      required:
+        - type
+        - role
+        - content
+
+    TextContentPart:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [input_text, text]
+        text:
+          type: string
+      required:
+        - type
+        - text
+
+    ChatAttachment:
+      type: object
+      description: 对话附件。
+      properties:
+        type:
+          type: string
+          enum: [input_file]
+        source:
+          $ref: "#/components/schemas/ChatAttachmentSource"
+      required:
+        - type
+        - source
+
+    ChatAttachmentSource:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [path]
+        path:
+          type: string
+          description: 文件在工作区中的相对路径。
+      required:
+        - type
+        - path
+
+    ChatUploadRequest:
+      type: object
+      description: 上传附件请求体。
+      properties:
+        file:
+          type: string
+          format: binary
+          description: 本地文件二进制内容，字段名固定为 file。
+      required:
+        - file
+
+    ChatUploadResponse:
+      type: object
+      description: 上传附件响应体。
+      properties:
+        name:
+          type: string
+          description: 原始文件名，用于前端展示。
+        path:
+          type: string
+          description: 工作区相对路径，用于后续 attachments[].source.path。
+      required:
+        - name
+        - path
+
+    OpenResponseStreamEvent:
+      type: object
+      description: OpenResponse 风格流式事件。
+      properties:
+        type:
+          type: string
+          description: SSE 事件类型，例如 response.created、response.output_text.delta、response.completed、response.failed。
+        response:
+          type: object
+          additionalProperties: true
+          description: 事件关联的响应对象。
+        item:
+          type: object
+          additionalProperties: true
+          description: 事件关联的输出项对象。
+        delta:
+          type: string
+          description: 文本增量内容。
+      additionalProperties: true
+
+    ChatMessagesResponse:
+      type: object
+      description: 会话消息查询响应。
+      properties:
+        sessionKey:
+          type: string
+          description: 会话键。
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/StudioMessage"
+      required:
+        - sessionKey
+        - messages
+
+    StudioMessage:
+      type: object
+      description: Studio 标准化后的会话消息。
+      properties:
+        id:
+          type: string
+          description: 消息 ID。
+        role:
+          type: string
+          enum: [user, assistant]
+          description: 消息角色。
+        content:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                $ref: "#/components/schemas/MessageContentPart"
+          description: 消息内容。若包含附件，服务端会补齐 input_file / input_files 内容项。
+        attachments:
+          type: array
+          description: 原始或补齐后的附件数组。
+          items:
+            $ref: "#/components/schemas/ChatAttachment"
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+      required:
+        - id
+        - role
+
+    MessageContentPart:
+      oneOf:
+        - $ref: "#/components/schemas/TextMessageContentPart"
+        - $ref: "#/components/schemas/InputFileContentPart"
+        - $ref: "#/components/schemas/InputFilesContentPart"
+
+    TextMessageContentPart:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [text, input_text]
+        text:
+          type: string
+      required:
+        - type
+        - text
+
+    InputFileContentPart:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [input_file]
+        source:
+          $ref: "#/components/schemas/ChatAttachmentSource"
+      required:
+        - type
+        - source
+
+    InputFilesContentPart:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [input_files]
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatAttachmentSource"
+      required:
+        - type
+        - files

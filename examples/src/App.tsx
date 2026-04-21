@@ -3,6 +3,8 @@ import { ChatKitCozeDemo } from '../chatkit_coze/App';
 import { ChatKitDataAgentDemo } from '../chatkit_data_agent/App';
 import { DIPAssistantDemo } from '../chatkit_data_agent/AssistantApp';
 import { DIPAssistantOnlyDemo } from '../chatkit_data_agent/AssistantOnlyApp';
+import { StudioCopilotDemo } from '../chatkit_studio/App';
+import { StudioAssistantDemo } from '../chatkit_studio/AssistantApp';
 
 /**
  * Demo 入口,提供三个示例:
@@ -11,7 +13,7 @@ import { DIPAssistantOnlyDemo } from '../chatkit_data_agent/AssistantOnlyApp';
  * 3. DIP Assistant - AISHU DIP 平台 Assistant
  */
 const App: React.FC = () => {
-  const [activeDemo, setActiveDemo] = useState<'coze' | 'dipCopilot' | 'dipAssistant' | 'dipAssistantOnly'>('coze');
+  const [activeDemo, setActiveDemo] = useState<'coze' | 'dipCopilot' | 'dipAssistant' | 'dipAssistantOnly' | 'studioCopilot' | 'studioAssistant'>('coze');
 
   const demoTitle = useMemo(() => {
     switch (activeDemo) {
@@ -23,6 +25,10 @@ const App: React.FC = () => {
         return 'DIP Assistant';
       case 'dipAssistantOnly':
         return 'DIP Assistant (Standalone)';
+      case 'studioCopilot':
+        return 'Studio Copilot';
+      case 'studioAssistant':
+        return 'Studio Assistant';
       default:
         return 'ChatKit Demo';
     }
@@ -76,6 +82,26 @@ const App: React.FC = () => {
           >
             DIP Assistant (Standalone)
           </button>
+          <button
+            className={`text-left px-3 py-2 rounded-lg border transition-colors ${
+              activeDemo === 'studioCopilot'
+                ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
+                : 'border-gray-200 hover:border-cyan-200 text-gray-700'
+            }`}
+            onClick={() => setActiveDemo('studioCopilot')}
+          >
+            Studio Copilot Demo
+          </button>
+          <button
+            className={`text-left px-3 py-2 rounded-lg border transition-colors ${
+              activeDemo === 'studioAssistant'
+                ? 'border-teal-500 bg-teal-50 text-teal-700'
+                : 'border-gray-200 hover:border-teal-200 text-gray-700'
+            }`}
+            onClick={() => setActiveDemo('studioAssistant')}
+          >
+            Studio Assistant Demo
+          </button>
         </div>
         <div className="text-xs text-gray-500">
           当前示例: <span className="font-semibold text-gray-700">{demoTitle}</span>
@@ -86,6 +112,8 @@ const App: React.FC = () => {
       {activeDemo === 'dipCopilot' && <ChatKitDataAgentDemo />}
       {activeDemo === 'dipAssistant' && <DIPAssistantDemo />}
       {activeDemo === 'dipAssistantOnly' && <DIPAssistantOnlyDemo />}
+      {activeDemo === 'studioCopilot' && <StudioCopilotDemo />}
+      {activeDemo === 'studioAssistant' && <StudioAssistantDemo />}
     </div>
   );
 };
